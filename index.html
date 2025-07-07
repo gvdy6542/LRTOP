@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Font Awesome за икони -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Сканиране на баркод</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+  /* Скриваме всички елементи, които са със role="progressbar" (това е spinner-а на HTMLService) */
+[role="progressbar"] {
+  display: none !important;
+}
+
+
+
+  :root {
+    /* Цветова палитра */
+    --color-primary:         #40E0D0; /* тюркоазено */
+    --color-primary-light:   #D1F4F1;
+    --color-secondary:       #27AE60; /* зелено */
+    --color-secondary-light: #E6F9EE;
+    --color-accent:          #E74C3C; /* червено */
+    --color-accent-light:    #FDE9E8;
+
+    --color-bg-start:        #F0F4F8;
+    --color-bg-end:          #D9E2EC;
+    --color-card:            #FFFFFF;
+    --color-border:          #CAD2D3;
+    --color-text:            #102A43;
+    --color-text-light:      #334E68;
+    --shadow-light:          rgba(16, 42, 67, 0.08);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    transition: all .2s ease;
+  }
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(145deg, var(--color-bg-start), var(--color-bg-end));
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 50px auto;
+    padding: 40px;
+    background: var(--color-card);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px var(--shadow-light);
+  }
+
+  header h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 2.25rem;
+    color: var(--color-primary);
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    width: 100%;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: #FAFBFC;
+    font-size: 1rem;
+    color: var(--color-text);
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+    background: #FFFFFF;
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    color: #FFF;
+    cursor: pointer;
+    box-shadow: 0 4px 16px var(--shadow-light);
+  }
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px var(--shadow-light);
+  }
+
+  .green-button {
+    background: var(--color-secondary);
+  }
+  .green-button:hover {
+    background: #249C55;
+  }
+
+  .red-button {
+    background: var(--color-accent);
+  }
+  .red-button:hover {
+    background: #CF3C2E;
+  }
+
+  .button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  #outputMessage {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: var(--color-accent-light);
+    border-left: 4px solid var(--color-accent);
+    border-radius: 8px;
+    color: var(--color-text-light);
+    font-size: 1rem;
+  }
+
+  .table-container {
+    margin-top: 32px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-card);
+    box-shadow: 0 4px 16px var(--shadow-light);
+  }
+  th, td {
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 0.95rem;
+  }
+  th {
+    background: var(--color-primary);
+    color: #FFF;
+    font-weight: 500;
+  }
+  tr:nth-child(even) {
+    background: var(--color-secondary-light);
+  }
+  tr:hover {
+    background: var(--color-primary-light);
+  }
+  .table-container button {
+    background: var(--color-primary);
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+  }
+  .table-container button:hover {
+    background: #36BEB8;
+  }
+
+  /* Модален прозорец при незавършена ревизия */
+  #resumePrompt {
+    font-family: 'Roboto', sans-serif;
+  }
+  #resumePrompt > .modal-content {
+    background: var(--color-card);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow-light);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+  }
+  #resumePrompt .modal-message {
+    margin-bottom: 24px;
+    color: var(--color-text);
+    font-size: 1rem;
+  }
+  #resumePrompt .modal-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5cm;
+  }
+  #resumePrompt .resume-btn,
+  #resumePrompt .new-btn {
+    width: 100px;
+    height: 100px;
+    border-radius: 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #FFF;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px var(--shadow-light);
+  }
+  #resumePrompt .resume-btn {
+    background: var(--color-primary);
+  }
+  #resumePrompt .resume-btn:hover {
+    background: #36BEB8;
+  }
+  #resumePrompt .new-btn {
+    background: var(--color-accent);
+  }
+  #resumePrompt .new-btn:hover {
+    background: #CF3C2E;
+  }
+
+  /* Специален стил за полето за количество */
+  #quantityInput {
+    display: none;
+    width: 250px;
+    height: 80px;
+    margin: 20px auto;
+    font-size: 2rem;
+    text-align: center;
+    border: none;
+    border-radius: 16px;
+    background: var(--color-card);
+    box-shadow: 0 8px 24px var(--shadow-light);
+    outline: none;
+  }
+  #quantityInput:focus {
+    box-shadow:
+      0 8px 24px var(--shadow-light),
+      0 0 0 4px var(--color-primary-light);
+  }
+
+  /* Scroll-to-top */
+  #scrollToTopBtn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: var(--color-primary);
+    color: #FFF;
+    font-size: 1.25rem;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 24px var(--shadow-light);
+    cursor: pointer;
+  }
+  #scrollToTopBtn:hover {
+    background: #36BEB8;
+  }
+
+  @media (max-width: 600px) {
+    .container {
+      padding: 20px;
+    }
+    header h1 {
+      font-size: 1.75rem;
+    }
+    table, th, td {
+      font-size: 0.9rem;
+    }
+    #resumePrompt .modal-buttons {
+      gap: 2rem;
+      flex-direction: column;
+    }
+  }
+
+  /* Бутон за изтриване на ред */
+  .delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-accent);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .delete-btn:hover {
+    color: #CF3C2E;
+    transform: scale(1.2);
+  }
+
+  /* Модален прозорец за количество */
+  #quantityModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  }
+  #quantityModal .modal-box {
+    background: var(--color-card);
+    padding: 24px 32px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 8px 24px var(--shadow-light);
+    width: 300px;
+  }
+  #quantityModal .modal-box h2 {
+    margin-bottom: 16px;
+    color: var(--color-text);
+    font-size: 1.25rem;
+  }
+  #quantityModal .modal-box label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    color: var(--color-text-light);
+  }
+  #quantityModal .modal-box input {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.5rem;
+    text-align: center;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background: #FAFBFC;
+  }
+  #quantityModal .modal-box input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+  }
+
+  /* Модален прозорец за преглед на ревизии */
+  #revisionsModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+  }
+  #revisionsModal .modal-box {
+    position: relative;
+    background: var(--color-card);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px var(--shadow-light);
+    max-width: 800px;
+    width: 90%;
+    max-height: 90%;
+    overflow: auto;
+    text-align: left;
+  }
+  /* Затварящ бутон „✖“ */
+  #revisionsModal .close-modal {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--color-text-light);
+  }
+  #revisionsModal .close-modal:hover {
+    color: var(--color-accent);
+    transform: scale(1.2);
+  }
+  #revisionsModal .modal-box h2 {
+    margin-bottom: 16px;
+    color: var(--color-text);
+  }
+  #revisionsModal .modal-box ul {
+    list-style: none;
+    padding: 0;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  #revisionsModal .modal-box li {
+    margin-bottom: 8px;
+  }
+  .rev-btn {
+    background: var(--color-primary-light);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .rev-btn:hover {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  #revTableContainer {
+    margin-top: 16px;
+  }
+  #revisionsModal .modal-box {
+  position: relative;    /* нужно, за да работи absolute на close-modal */
+  /* … останалите правила … */
+}
+
+#revisionsModal .close-modal {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--color-text-light);
+}
+#revisionsModal .close-modal:hover {
+  color: var(--color-accent);
+  transform: scale(1.2);
+}
+
+</style>
+
+</head>
+
+<body>
+  <div class="container">
+    <header style="text-align: center;">
+      <h1>Недко Недков - Овчарово ЕООД</h1>
+    </header>
+
+    <input type="text" id="store" placeholder="Магазин" style="width:4cm;">
+
+    <h1 style="text-align: center;">Сканиране на баркод</h1>
+    <div id="nameFields">
+      <input type="text" id="name1" placeholder="Име Фамилия" style="width:10cm;">
+      <input type="text" id="name2" placeholder="Име Фамилия" style="width:10cm;">
+    </div>
+    <button class="green-button" onclick="startRevision()">Започни ревизия</button>
+
+    <input type="text"
+           id="barcodeInput"
+           placeholder="Въведете баркод тук"
+           onkeypress="handleKeyPress(event)"
+           style="display:none; width:15cm; margin:0 auto;">
+
+    <div id="outputMessage">Добре дошли! Изберете „Започни ревизия“ или „Въвеждане на ППР“ </div>
+    <input type="number"
+           id="quantityInput"
+           placeholder="Количество"
+           step="0.001"
+           min="0.001"
+           maxlength="6"
+           onkeypress="handleKeyPress(event)">
+
+    <div class="button-container">
+      <button id="interfaceButton" onclick="openinterface()" style="display:none;">Обработка</button>
+      <button id="referenceButton" onclick="openReference()" style="display:none;">ИНВЕНТАРИЗАЦИЯ</button>
+       <button id="viewRevisionsBtn"  class="green-button">Преглед на ревизии</button>  <!-- НОВ -->
+       <!-- 1. Бутон за Въвеждане на ППР -->
+       <button class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
+
+    </div>
+
+    <div class="table-container">
+      <table id="itemDetails" style="display:none;">
+        <thead>
+          <tr>
+            <th>Артикулен номер</th>
+            <th>Описание</th>
+            <th>Баркод</th>
+            <th>Количество</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <button id="finishBtn" class="red-button" onclick="downloadAndSave()">Край на ревизия</button>
+
+  </div>
+
+  <button id="scrollToTopBtn">Горе</button>
+
+<!-- Модал за преглед на ревизии -->
+<div id="revisionsModal" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+">
+  <div class="modal-box" style="
+      position: relative;
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90%;
+      box-shadow: 0 8px 24px rgba(16,42,67,0.08);
+      overflow: auto;
+  ">
+    <!-- ✖ бутон в горния десен ъгъл -->
+    <button class="close-modal" onclick="closeRevisions()" style="
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: transparent;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        color: #334E68;
+    ">✖</button>
+
+    <h2 style="margin-top: 0;">Ревизии за магазин: <span id="revStoreName"></span></h2>
+
+    <ul id="revList" style="
+        list-style: none;
+        padding-left: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-bottom: 16px;
+    "></ul>
+
+    <div id="revTableContainer"></div>
+
+    <button onclick="closeRevisions()" style="
+        margin-top: 24px;
+        background: #E74C3C;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+    ">Затвори</button>
+  </div>
+</div>
+<!-- 2. Модален прозорец -->
+<div id="pprModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10000;">
+  <div class="modal-box" style="background:#fff; padding:24px; border-radius:16px; width:90%; max-width:600px; max-height:90vh; overflow-y:auto;">
+    <h2>Въвеждане на ППР</h2>
+
+    <input type="text" id="pprStore" placeholder="№ на магазин" style="width:100%; margin-bottom:12px; font-size:18px; padding:12px; border-radius:8px;">
+
+    <label for="pprDate" style="font-size: 18px; display:block; margin-bottom: 6px;">Дата на ППР:</label>
+
+
+    <input 
+  type="date" 
+  id="pprDate" 
+  placeholder="Дата" 
+  readonly 
+  onkeydown="return false;" 
+  style="
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 16px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  "
+>
+
+
+
+    <!-- 🚀 Поле за номер на ППР -->
+    <input type="text" id="pprNumber" placeholder="Номер на ППР" style="width:100%; margin-bottom:12px; font-size:18px; padding:12px; border-radius:8px;">
+
+    <!-- 🚀 Поле за забележка -->
+    <textarea id="pprNote" placeholder="Причина за възникване на ППР:" 
+  style="width:100%; height:100px; margin-bottom:12px; font-size:16px; padding:10px; border-radius:8px; border:1px solid #ccc;">
+</textarea>
+<!-- Тип на ППР -->
+    <div style="margin-bottom: 12px;">
+      <label><input type="radio" name="pprType" value="Брак" checked> Брак</label>
+      <label style="margin-left: 20px;"><input type="radio" name="pprType" value="Движение"> Движение между обекти</label>
+    </div>
+
+<input 
+  type="text" 
+  id="pprBarcodeInput" 
+  placeholder="Сканирай баркод" 
+  onkeypress="handlePPRBarcode(event)" 
+  style="width:100%; margin-bottom:12px; font-size:18px; padding:12px; border-radius:8px; background-color:#e0f8e9; border:1px solid #55b47a;">
+
+
+    <div class="table-container" style="max-height:300px; overflow-y:auto; margin-bottom:16px; border:1px solid #ddd; border-radius:8px;">
+      <table id="pprTable" style="width:100%; border-collapse:collapse;">
+        <thead style="background:#f9f9f9;">
+  <tr>
+    <th>Код</th>
+    <th>Име</th>
+    <th>Баркод</th>
+    <th>Количество</th>
+    <th>Ед. цена</th>      <!-- НОВО -->
+    <th>Общо</th>          <!-- НОВО -->
+    <th></th>
+  </tr>
+</thead>
+
+        <tbody></tbody>
+        
+<tfoot>
+  <tr>
+    <!-- colspan="5" покрива “Код-Име-Баркод-Количество-Ед. цена” -->
+    <td colspan="5" style="text-align:right;font-weight:600">Общо:</td>
+    <td id="pprSum">0.00</td>
+    <td></td>          <!-- последната празна за бутона ✖ -->
+  </tr>
+</tfoot>
+      </table>
+    </div>
+
+    <button id="submitPPRBtn" class="green-button" onclick="submitPPR()">Запиши в ППР</button>
+
+    <button class="red-button" onclick="closePPRModal()">Затвори</button>
+  </div>
+</div>
+
+
+  <script>
+   // 1. Модален прозорец при незавършена ревизия
+function showResumePrompt(message, data) {
+  const overlay = document.createElement('div');
+  overlay.id = 'resumePrompt';
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    top: 0, left: 0,
+    width: '100%', height: '100%',
+    background: 'rgba(0,0,0,0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999
+  });
+
+  // използваме класове за бутоните и за съдържанието
+  overlay.innerHTML = `
+    <div class="modal-content">
+      <p class="modal-message">${message}</p>
+      <div class="modal-buttons">
+        <button class="resume-btn">Продължи с ревизията</button>
+        <button class="new-btn">Нова ревизия</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('.resume-btn').addEventListener('click', () => {
+    startRevision();
+    JSON.parse(data).forEach(r => addRowToTable(...r));
+    document.getElementById('itemDetails').style.display = 'table';
+    overlay.remove();
+  });
+
+  overlay.querySelector('.new-btn').addEventListener('click', () => {
+    localStorage.removeItem('revisionData');
+    localStorage.removeItem('revisionTimestamp');
+    clearTable();
+    document.getElementById('itemDetails').style.display = 'none';
+    overlay.remove();
+  });
+}
+
+window.onload = function() {
+  const saved = localStorage.getItem('revisionData');
+  if (saved) {
+    const ts   = localStorage.getItem('revisionTimestamp');
+    const date = ts ? new Date(ts).toLocaleString() : null;
+    const msg  = date
+      ? `Незавършена ревизия от ${date}.`
+      : 'Незавършена ревизия е намерена.';
+    showResumePrompt(msg, saved);
+  }
+};
+
+
+    // 2. Start Revision
+    function startRevision() {
+      document.getElementById('nameFields').style.display = 'none';
+      document.getElementById('barcodeInput').style.display = 'block';
+      document.querySelector('.green-button').style.display = 'none';
+      document.getElementById('barcodeInput').focus();
+    }
+
+    // 3. Scroll-to-top
+    const scrollBtn = document.getElementById('scrollToTopBtn');
+    window.onscroll = () => scrollBtn.style.display = window.scrollY > 200 ? 'block' : 'none';
+    scrollBtn.onclick = () => window.scrollTo({ top:0, behavior:'smooth' });
+
+    // 4. Special codes
+    function checkSpecialCode() {
+      const c = document.getElementById('specialCode')?.value.trim();
+      document.getElementById('interfaceButton').style.display = c==='*0001' ? 'block' : 'none';
+      //document.getElementById('referenceButton').style.display = c==='*0000' ? 'block' : 'none';
+    }
+
+    // 5. Handle Enter on barcode input
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') {
+        const bc = document.getElementById('barcodeInput').value.trim();
+        document.getElementById('barcodeInput').value = '';
+        if (bc.length > 20) {
+          document.getElementById('outputMessage').textContent = 'Баркодът е твърде дълъг!';
+        } else if (bc) {
+          processBarcode(bc);
+        }
+      }
+    }
+
+    // 6. Call GAS to find item
+    function processBarcode(barcode) {
+      document.getElementById('outputMessage').textContent = 'Обработка...';
+      if (barcode.startsWith('28')) {
+        const code = barcode.substring(0,7).replace(/^28/,'3');
+        const qty  = parseInt(barcode.substring(7,12),10)/1000;
+        google.script.run.withSuccessHandler(name => {
+          if (name) updateItemDetails(code,name,barcode,qty);
+          else {
+            const alt = '4'+code.substring(1);
+            google.script.run.withSuccessHandler(name2 => {
+              if (name2) updateItemDetails(alt,name2,barcode,qty);
+              else document.getElementById('outputMessage').textContent = 'Не намерен!';
+            }).findItemNameByCode(alt);
+          }
+        }).findItemNameByCode(code);
+      } else {
+        const code = barcode;
+        google.script.run.withSuccessHandler(name => {
+          if (name) updateItemDetails(code,name,barcode,null);
+          else {
+            google.script.run.withSuccessHandler(nameF => {
+              if (nameF) updateItemDetails(code,nameF,barcode,null);
+              else document.getElementById('outputMessage').textContent = 'Не намерен!';
+            }).findItemNameByCodeInColumnF(code);
+          }
+        }).findItemNameByCode(code);
+      }
+    }
+
+    // 7. Update UI
+    function updateItemDetails(ic,inb,bc,qt) {
+      let msg = 'Артикул: '+inb;
+      if (qt!=null) msg += ', '+qt.toFixed(3)+' кг';
+      document.getElementById('outputMessage').textContent = msg;
+      if (qt!=null) appendOrUpdateTable(ic,inb,bc,qt);
+      else showQuantityInput(ic,inb,bc);
+    }
+
+   // 8. Show quantity input като централен модал
+function showQuantityInput(ic, inb, bc) {
+  // създаваме оверлей
+  const overlay = document.createElement('div');
+  overlay.id = 'quantityModal';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>${inb}</h2>
+      <label for="modalQtyInput">Въведи количество:</label>
+      <input
+        type="number"
+        id="modalQtyInput"
+        step="0.001"
+        min="0.001"
+        maxlength="6"
+        placeholder="0.000"
+      />
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = overlay.querySelector('#modalQtyInput');
+  const out   = document.getElementById('outputMessage');
+  input.focus();
+
+  // ограничаваме дължината до 6 символа
+  input.addEventListener('input', () => {
+    if (input.value.length > 6) {
+      input.value = '';
+      out.textContent = 'Максимум 6 знака!';
+    }
+  });
+
+  // Enter обработка
+  input.onkeypress = ev => {
+    if (ev.key === 'Enter') {
+      const raw = input.value.trim();
+      if (!/^\d+(\.\d{1,3})?$/.test(raw)) {
+        out.textContent = 'Невалидно количество!';
+        return;
+      }
+      const v = parseFloat(raw);
+      if (v <= 0) {
+        out.textContent = 'Трябва да е > 0!';
+        return;
+      }
+      // записваме и затваряме модала
+      appendOrUpdateTable(ic, inb, bc, v);
+      overlay.remove();
+      out.textContent = 'Артикулът е добавен!';
+      // връщаме фокуса на полето за баркод
+      const bcInput = document.getElementById('barcodeInput');
+      bcInput.value = '';
+      bcInput.focus();
+    }
+  };
+
+  // Ако кликнат извън модал-бокса, затваряме без запис
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      overlay.remove();
+      document.getElementById('barcodeInput').focus();
+    }
+  });
+}
+
+    // 9. Edit quantity
+    function editQuantity(btn) {
+      const cell = btn.closest('tr').cells[3];
+      const cur  = parseFloat(cell.textContent);
+      const neu  = prompt('Ново количество:',cur.toFixed(3));
+      if (neu && !isNaN(neu) && parseFloat(neu)>0) {
+        cell.textContent = parseFloat(neu).toFixed(3);
+        saveTableToLocalStorage();
+      } else alert('Грешно!');
+    }
+
+    // 10. Save to localStorage + timestamp
+    function saveTableToLocalStorage() {
+      const data = Array.from(
+        document.querySelectorAll('#itemDetails tbody tr')
+      ).map(r => Array.from(r.cells).map(c => c.textContent));
+      localStorage.setItem('revisionData', JSON.stringify(data));
+      localStorage.setItem('revisionTimestamp', new Date().toISOString());
+    }
+
+    // 11. Append or update row
+function appendOrUpdateTable(ic,inb,bc,qt) {
+  const tb = document.querySelector('#itemDetails tbody');
+  let ex = Array.from(tb.rows).find(r => r.cells[0].textContent === ic);
+  if (ex) {
+    const cur = parseFloat(ex.cells[3].textContent);
+    ex.cells[3].textContent = (cur + qt).toFixed(3);
+  } else {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ic}</td>
+      <td>${inb}</td>
+      <td>${bc}</td>
+      <td>${qt.toFixed(3)}</td>
+      <td class="actions">
+        <button class="edit-btn" onclick="editQuantity(this)">✏️</button>
+        <button class="delete-btn" onclick="confirmDelete(this)">✖️</button>
+      </td>
+    `;
+    tb.prepend(tr);
+  }
+  document.getElementById('itemDetails').style.display = 'table';
+  saveTableToLocalStorage();
+}
+// 11.1. Delete a row
+function deleteRow(btn) {
+  const row = btn.closest('tr');
+  row.remove();
+  saveTableToLocalStorage();
+}
+// 11,2 Показва потвърждение и ако потребителят каже „Да“ – изтрива реда
+function confirmDelete(btn) {
+  if (confirm('Наистина ли искате да изтриете този ред?')) {
+    deleteRow(btn);
+  }
+}
+
+// Вече съществуващата функция
+function deleteRow(btn) {
+  const row = btn.closest('tr');
+  row.remove();
+  saveTableToLocalStorage();
+}
+
+
+    // 12. Clear UI
+    function clearTable() {
+      document.querySelector('#itemDetails tbody').innerHTML = '';
+      document.getElementById('outputMessage').textContent = '';
+    }
+    // 13. Finish revision
+function downloadAndSave() {
+  // ── тук добавяш ──
+  const endBtn = document.querySelector('.red-button');
+  endBtn.disabled = true;
+
+  const out = document.getElementById('outputMessage');
+  out.textContent = 'Записване...';
+  out.classList.add('show');
+  // ──────────────────
+
+  const store = document.getElementById('store').value.trim();
+  const n1    = document.getElementById('name1').value.trim();
+  const n2    = document.getElementById('name2').value.trim();
+  if (!store) {
+    alert('Моля, въведете магазин!');
+    endBtn.disabled = false;    // ако няма магазин – връщаме бутона
+    out.classList.remove('show');
+    return;
+  }
+  const now = new Date();
+  const dt  = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}`;
+  const fn  = `${store}_${n1}_${n2}_${dt}`;
+  const arr = Array.from(
+    document.querySelectorAll('#itemDetails tbody tr')
+  ).map(r => Array.from(r.cells).map(c => c.textContent));
+
+  google.script.run
+    .withSuccessHandler(res => {
+      out.textContent = res;
+      // малко изчакване и скриване
+      setTimeout(() => out.classList.remove('show'), 1500);
+      localStorage.removeItem('revisionData');
+      localStorage.removeItem('revisionTimestamp');
+      clearTable();
+    })
+    .withFailureHandler(err => {
+      out.textContent = 'Грешка: ' + err;
+      endBtn.disabled = false;
+    })
+    .saveToGoogleDrive(fn, arr);
+}
+
+
+
+    // 14. Open extra pages
+    function openReference() {
+      google.script.run.withSuccessHandler(html => {
+        let w = window.open(); w.document.write(html); w.document.close();
+      }).loadReferencePage();
+    }
+    function openinterface() {
+      google.script.run.withSuccessHandler(html => {
+        let w = window.open(); w.document.write(html); w.document.close();
+      }).loadinterfacePage();
+    }
+
+    
+    // 15. Липсващата функция: addRowToTable(...)
+function addRowToTable(articleNumber, description, barcode, quantity) {
+  const tb = document.querySelector('#itemDetails tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${articleNumber}</td>
+    <td>${description}</td>
+    <td>${barcode}</td>
+    <td>${quantity}</td>
+    <td class="actions">
+      <button class="edit-btn" onclick="editQuantity(this)">✏️</button>
+      <button class="delete-btn" onclick="confirmDelete(this)">✖️</button>
+    </td>
+  `;
+  tb.appendChild(tr);
+  document.getElementById('itemDetails').style.display = 'table';
+}
+document.getElementById('viewRevisionsBtn').addEventListener('click', () => {
+  const storeName = document.getElementById('store').value.trim();
+  if (!storeName) return alert('Моля, въведете кода на магазина.');
+
+  google.script.run
+    .withSuccessHandler(revs => {
+      // revs е масив от {name, url, date}
+      let html;
+      if (!revs.length) {
+        html = `<p>Няма открити ревизии за магазин “${storeName}”.</p>`;
+      } else {
+        html = '<ul style="padding-left:1em;">';
+        revs.forEach(r => {
+          html += `<li>
+                     <a href="${r.url}" target="_blank">${r.date} – ${r.name}</a>
+                   </li>`;
+        });
+        html += '</ul>';
+      }
+      // покажи модал
+      const overlay = document.createElement('div');
+      overlay.id = 'revisionsModal';
+      overlay.innerHTML = `
+        <div class="modal-box">
+          <h2>Ревизии за магазин “${storeName}”</h2>
+          ${html}
+          <button class="close-revisions" onclick="closeRevisions()">Затвори</button>
+        </div>`;
+      document.body.appendChild(overlay);
+    })
+    .listRevisions(storeName);
+});
+
+<!-- … твоят вече работещ код … -->
+
+// 16. Преглед на ревизии
+document.getElementById('viewRevisionsBtn').addEventListener('click', () => {
+  const store = document.getElementById('store').value.trim();
+  if (!store) return alert('Моля, въведете код на магазина.');
+
+  google.script.run
+    .withFailureHandler(e => alert('Грешка от сървъра: ' + e.message))
+    .withSuccessHandler(renderRevisionsModal)
+    .listRevisions(store);
+});
+
+function renderRevisionsModal(revs) {
+  if (!revs.length) {
+    return alert('Няма открити ревизии за този магазин.');
+  }
+  const overlay = document.createElement('div');
+  overlay.id = 'revisionsModal';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>Ревизии за магазин “${document.getElementById('store').value.trim()}”</h2>
+      <ul>
+        ${revs.map(r =>
+          `<li>
+             <button onclick="showRevisionData('${r.id}')">
+               ${r.date} — ${r.name}
+             </button>
+           </li>`
+        ).join('')}
+      </ul>
+      <button onclick="closeRevisions()">Затвори</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function closeRevisions() {
+  const m = document.getElementById('revisionsModal');
+  if (m) m.remove();
+}
+
+function showRevisionData(fileId) {
+  google.script.run
+    .withFailureHandler(e => alert('Грешка: '+e.message))
+    .withSuccessHandler(data => {
+      const box = document.querySelector('#revisionsModal .modal-box');
+      box.innerHTML = `
+        <h2>Данни от ревизия</h2>
+        <div class="table-container">
+          <table>
+            <thead><tr>${data[0].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${data.slice(1).map(r=>
+                `<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`
+              ).join('')}
+            </tbody>
+          </table>
+        </div>
+        <button onclick="closeRevisions()">Затвори</button>`;
+    })
+    .getRevisionData(fileId);
+}
+// Стяга се единствено слушател за 'viewRevisionsBtn'
+    document.getElementById('viewRevisionsBtn').addEventListener('click', () => {
+      const store = document.getElementById('store').value.trim();
+      if (!store) return alert('Моля, въведете код на магазина.');
+      document.getElementById('revStoreName').textContent = store;
+      google.script.run
+        .withFailureHandler(e => alert('Грешка от сървъра: ' + e.message))
+        .withSuccessHandler(renderRevisions)
+        .listRevisions(store);
+    });
+
+    function renderRevisions(revs) {
+      const list = document.getElementById('revList');
+      list.innerHTML = '';
+      if (!revs.length) {
+        list.innerHTML = '<li>Няма открити ревизии.</li>';
+      } else {
+        revs.forEach(r => {
+          const btn = document.createElement('button');
+          btn.className = 'rev-btn';
+          btn.textContent = `${r.date} — ${r.name}`;
+          btn.addEventListener('click', () => loadRevisionData(r.id));
+          const li = document.createElement('li');
+          li.appendChild(btn);
+          list.appendChild(li);
+        });
+      }
+      document.getElementById('revisionsModal').style.display = 'flex';
+    }
+
+    // Закриване на модала
+    document.querySelector('#revisionsModal .close-revisions').addEventListener('click', () => {
+      document.getElementById('revisionsModal').style.display = 'none';
+      document.getElementById('revTableContainer').innerHTML = '';
+    });
+
+    function loadRevisionData(fileId) {
+      google.script.run
+        .withFailureHandler(e => alert('Грешка: ' + e.message))
+        .withSuccessHandler(renderRevisionTable)
+        .getRevisionData(fileId);
+    }
+
+function renderRevisionTable(data) {
+  // 1. Проверяваме дали data е валиден двумерен масив с поне един ред заглавия и поне един ред данни
+  if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[0])) {
+    console.warn('Няма данни за рендиране на таблица:', data);
+    return;
+  }
+
+  // 2. Вземаме контейнера и се уверяваме, че съществува
+  const container = document.getElementById('revTableContainer');
+  if (!container) {
+    console.error('Липсва #revTableContainer в DOM-а');
+    return;
+  }
+
+  // 3. Извличаме headers и rows
+  const headers = data[0];
+  const rows    = data.slice(1);
+
+  // 4. Сглобяваме HTML-а на таблицата
+  let html = '<table><thead><tr>'
+           + headers.map(h => `<th>${h}</th>`).join('')
+           + '</tr></thead><tbody>';
+  rows.forEach(r => {
+    // За всеки ред гарантираме, че е масив
+    if (!Array.isArray(r)) return;
+    html += '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // 5. Вмъкваме HTML-а
+  container.innerHTML = html;
+}
+
+    function closeRevisions() {
+  const modal = document.getElementById('revisionsModal');
+  modal.style.display = 'none';
+  document.getElementById('revTableContainer').innerHTML = '';
+}
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const viewBtn = document.getElementById('viewRevisionsBtn');
+    viewBtn.addEventListener('click', () => {
+      const store = document.getElementById('store').value.trim();
+      if (!store) return alert('Моля, въведете код на магазина.');
+      // Блокираме бутона
+      viewBtn.disabled = true;
+      // Сигурно скриваме spinner-а, ако се появява
+      document.querySelectorAll('[role="progressbar"]').forEach(el => el.style.display = 'none');
+      google.script.run
+        .withSuccessHandler((revs) => {
+          renderRevisions(revs);
+          // Разблокираме бутона
+          viewBtn.disabled = false;
+        })
+        .withFailureHandler((err) => {
+          alert('Грешка: ' + err.message);
+          viewBtn.disabled = false;
+        })
+        .listRevisions(store);
+    });
+  });
+
+  function openPPRModal() {
+  // 1) вадим днешната дата
+  const today = new Date().toISOString().split('T')[0];
+  // 2) пълним полето
+  const dateField = document.getElementById('pprDate');
+  if (dateField) dateField.value = today;
+  
+  // 3) показваме модала
+  document.getElementById('pprModal').style.display = 'flex';
+  document.getElementById('pprBarcodeInput').focus();
+}
+
+function closePPRModal() {
+  document.getElementById('pprModal').style.display = 'none';
+  document.querySelector('#pprTable tbody').innerHTML = '';
+}
+
+function handlePPRBarcode(e) {
+  if (e.key !== 'Enter') return;
+  const barcode = e.target.value.trim();
+  if (!barcode) return;
+  e.target.value = '';
+
+  // 1) взимаме данните за артикула
+  google.script.run.withSuccessHandler(item => {
+    if (!item || !item.itemCode) return alert('Няма такъв баркод.');
+
+    // 2) взимаме цената от GAS
+    google.script.run.withSuccessHandler(price => {
+
+      // 3) питаме за количество
+      const qtyStr = prompt('Въведи количество за ' + item.itemName);
+      const qty    = parseFloat(qtyStr);
+      if (!qty || qty <= 0) return;
+
+      // 4) добавяме реда
+      addToPPRTable(item.itemCode, item.itemName, item.itemBarcode, price, qty);
+
+    }).getPriceByCode(item.itemCode);
+
+  }).processBarcode(barcode);
+}
+
+
+
+
+/* финалната версия – приема unitPrice */
+/* ЕДИНСТВЕНА валидна версия */
+/**  единствена работеща версия  **/
+function addToPPRTable(code, name, barcode, unitPrice, qty) {
+  /* ако цената липсва – питаме */
+  if (!unitPrice || unitPrice <= 0) {
+    unitPrice = parseFloat(prompt('Единична цена за ' + name));
+    if (!unitPrice || unitPrice <= 0) return alert('Невалидна цена.');
+  }
+
+  const total = qty * unitPrice;
+
+  const tbody = document.querySelector('#pprTable tbody');
+  let row = Array.from(tbody.rows)
+                 .find(r => r.cells[0].textContent === code);
+
+  if (row) {                       // ред съществува → акумулираме
+    row.cells[3].textContent = (
+      parseFloat(row.cells[3].textContent) + qty
+    ).toFixed(3);
+    row.cells[5].textContent = (
+      parseFloat(row.cells[5].textContent) + total
+    ).toFixed(2);
+  } else {                         // нов ред
+    row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${code}</td>
+      <td>${name}</td>
+      <td>${barcode}</td>
+      <td>${qty.toFixed(3)}</td>
+      <td>${unitPrice.toFixed(2)}</td>
+      <td>${total.toFixed(2)}</td>
+      <td><button onclick="this.closest('tr').remove(); updatePPRSum();">✖️</button></td>
+    `;
+    tbody.prepend(row);
+  }
+  updatePPRSum();
+}
+
+
+function submitPPR() {
+  const store = document.getElementById('pprStore').value.trim();
+  const date = document.getElementById('pprDate').value.trim();
+  const pprNumber = document.getElementById('pprNumber').value.trim();
+  const note = document.getElementById('pprNote')?.value.trim() || '';
+  const reasonType = document.querySelector('input[name="pprType"]:checked').value;
+
+  if (!store || !date || !pprNumber) return alert('Моля, въведете име на магазин, дата и номер на ППР.');
+
+  const rows = Array.from(document.querySelectorAll('#pprTable tbody tr'));
+  const data = rows.map(r => Array.from(r.cells).map(c => c.textContent));
+  if (!data.length) return alert('Няма въведени артикули.');
+
+  const saveBtn = document.querySelector('button.green-button[onclick="submitPPR()"]');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Записване...';
+
+  google.script.run.withSuccessHandler(msg => {
+    alert(msg);
+    closePPRModal();
+    document.getElementById('pprStore').value = '';
+    document.getElementById('pprDate').value = '';
+    document.getElementById('pprNumber').value = '';
+    document.getElementById('pprNote').value = '';
+    document.querySelector('#pprTable tbody').innerHTML = '';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Запиши в ППР';
+  }).withFailureHandler(err => {
+    alert('⚠️ Грешка: ' + err.message);
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Запиши в ППР';
+  }).savePPRData(store, date, data, pprNumber, note, reasonType);
+
+}
+
+// ДНЕШНА ДАТА В МОДУЛА ППР 
+   window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const dateField = document.getElementById('pprDate');
+    if (dateField) dateField.value = today;
+  });
+
+
+function updatePPRSum() {
+  let sum = 0;
+  document.querySelectorAll('#pprTable tbody tr')
+          .forEach(r => sum += parseFloat(r.cells[5].textContent) || 0);
+  document.getElementById('pprSum').textContent = sum.toFixed(2);
+}
+function showQuantityInputPPR(code, name, barcode, unitPrice) {
+  const overlay = document.createElement('div');
+  overlay.id = 'quantityModal';
+  overlay.innerHTML = `
+    <div class="modal-box">
+       <h2>${name}</h2>
+       <label>Количество:</label>
+       <input id="pprQty" type="number" step="0.001" min="0.001" placeholder="0.000">
+       <button style="margin-top:12px" onclick="confirmPPRQty('${code}','${name}','${barcode}',${unitPrice})">OK</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('pprQty').focus();
+}
+
+function confirmPPRQty(code,name,barcode,unitPrice){
+  const qty = parseFloat(document.getElementById('pprQty').value);
+  if(!qty||qty<=0){alert('Невалидно количество');return;}
+  document.getElementById('quantityModal').remove();
+  addToPPRTable(code,name,barcode,unitPrice);
+}
+
+
+</script>
+</body>
+</html>

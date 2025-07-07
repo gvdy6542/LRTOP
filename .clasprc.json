@@ -1,0 +1,11 @@
+{
+  "tokens": {
+    "default": {
+      "client_id": "1072944905499-vm2v2i5dvn0a0d2o4ca36i1vge8cvbn0.apps.googleusercontent.com",
+      "client_secret": "v6V3fKV_zWU7iw1DrpO1rknX",
+      "type": "authorized_user",
+      "refresh_token": "1//03FFW_cOlHotDCgYIARAAGAMSNwF-L9IrQ60ktFKpkn2JySQO_nwYf1YtgJSlEEkJB5N9op0lf4Ij-wF9MaBubVA5YbsT2LqgpnY",
+      "access_token": "ya29.a0AS3H6Ny4PnsFPmxzZuPQJKcVRoQDOK5H_t819rZFRSmSrwdbBnRrqeReV-M465Vz4jpi8n9E8w01EY5k7y50vHdX8PEc9_bQKkK4rtRP4Krr_V9Yt6oVsUiDPZ5xNu4RDHbC7LW8uTEBfX1qVFRms3W4H0-4w58rIgXDeQztaCgYKASsSARISFQHGX2MiqOruUgK0tSFDNcDcTdH7hw0175"
+    }
+  }
+}

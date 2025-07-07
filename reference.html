@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Обработка на файлове</title>
+    <style>
+        button {
+            font-size: 16px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-left: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        .match-list {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .match-item {
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .match-item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+    <script>
+        function startProcessing() {
+            document.getElementById("startButton").disabled = true;
+            google.script.run.withSuccessHandler(updateTable).processFilesWithProgress();
+        }
+
+        function updateTable(processedFiles) {
+            let table = document.getElementById("processedFilesTable");
+            table.innerHTML = "<tr><th>Обработени файлове</th><th>Качи файл</th><th>Действие</th></tr>";
+
+            processedFiles.forEach(file => {
+                let row = table.insertRow();
+                let cell1 = row.insertCell(0);
+                let cell2 = row.insertCell(1);
+                let cell3 = row.insertCell(2);
+
+                cell1.textContent = file;
+
+                let fileInput = document.createElement("input");
+                fileInput.type = "file";
+                fileInput.id = "fileInput_" + file;
+                cell2.appendChild(fileInput);
+
+                let uploadButton = document.createElement("button");
+                uploadButton.textContent = "Качи";
+                uploadButton.onclick = function() {
+                    uploadFile(fileInput.files[0], file);
+                };
+                cell3.appendChild(uploadButton);
+            });
+        }
+
+        function uploadFile(file, targetFileName) {
+            if (!file) {
+                alert("Моля, изберете файл за качване!");
+                return;
+            }
+
+            console.log("Избран файл:", file.name);  // Логване на името на файла
+
+            let reader = new FileReader();
+            reader.onload = function(event) {
+                let content = event.target.result;
+                console.log("Четене на файл в бинарен формат...");
+                google.script.run.withSuccessHandler(function() {
+                    alert("Файлът е качен успешно в " + targetFileName);
+                }).uploadXlsxDataToFile(content, targetFileName);
+            };
+            reader.readAsArrayBuffer(file);  // Използваме readAsArrayBuffer за .xlsx файлове
+        }
+
+        function searchFiles() {
+            var query = document.getElementById('searchQuery').value;
+            google.script.run.withSuccessHandler(updateMatchList).searchFiles(query);
+        }
+
+        function updateMatchList(files) {
+            var matchList = document.getElementById('matchList');
+            matchList.innerHTML = '';
+            
+            files.forEach(function(file) {
+                var item = document.createElement('div');
+                item.classList.add('match-item');
+                item.textContent = file.name;
+                item.onclick = function() {
+                    window.open(file.url, '_blank');
+                };
+                matchList.appendChild(item);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h2>Обработка на файлове</h2>
+    <button id="startButton" onclick="startProcessing()">Старт обработка</button>
+    <table id="processedFilesTable">
+        <tr><th>Обработени файлове</th><th>Качи файл</th><th>Действие</th></tr>
+    </table>
+
+    <div>
+        <input type="text" id="searchQuery" placeholder="Търсене на файл">
+        <button onclick="searchFiles()">Търсене</button>
+    </div>
+
+    <div class="match-list" id="matchList">
+        <!-- Ще се показват файловете, които отговарят на търсенето -->
+    </div>
+</body>
+</html>
