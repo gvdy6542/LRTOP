@@ -982,19 +982,48 @@ function savePPRData(storeName,dateString,tableData,pprNumber,note,reasonType){
   const blob      = UrlFetchApp.fetch(exportUrl,{headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()}})
                         .getBlob().setName(fileName+'.xlsx');
 
-  MailApp.sendEmail({
-     to:EMAIL_TO,
-     subject:`ППР №${pprNumber} – ${storeName} (${dateString})`,
-     htmlBody:`<p>✅ ППР №${pprNumber} е въведен.</p>
-               <p><strong>Магазин:</strong> ${storeName}<br>
-                  <strong>Дата:</strong> ${dateString}</p>
-               ${note?`<p><strong>Причина:</strong> ${note}</p>`:''}
-               ${reasonType?`<p><strong>Тип ППР:</strong> ${reasonType}</p>`:''}
-               <p><a href="${newFile.getUrl()}" target="_blank">Отвори файла в Google Таблици</a></p>`,
-     attachments:[blob]
-  });
+  sendViaSendGrid(
+     EMAIL_TO,
+     `ППР №${pprNumber} – ${storeName} (${dateString})`,
+     `<p>✅ ППР №${pprNumber} е въведен.</p>
+        <p><strong>Магазин:</strong> ${storeName}<br>
+           <strong>Дата:</strong> ${dateString}</p>
+        ${note?`<p><strong>Причина:</strong> ${note}</p>`:''}
+        ${reasonType?`<p><strong>Тип ППР:</strong> ${reasonType}</p>`:''}
+        <p><a href="${newFile.getUrl()}" target="_blank">Отвори файла в Google Таблици</a></p>`,
+     blob
+  );
 
   return '✅ Записът е направен и имейлът е изпратен.';
+}
+
+/**
+ * Изпраща имейл чрез SendGrid API.
+ * @param {string} to        - Списък получатели, разделени със запетаи.
+ * @param {string} subject   - Тема на имейла.
+ * @param {string} htmlBody  - HTML съдържание на имейла.
+ * @param {Blob}   blob      - Прикачен файл за изпращане.
+ */
+function sendViaSendGrid(to, subject, htmlBody, blob) {
+  var payload = {
+    personalizations: [{ to: to.split(/,\s*/) .map(e => ({ email: e.trim() })) }],
+    from: { email: 'noreply@yourdomain.com' },
+    subject: subject,
+    content: [{ type: 'text/html', value: htmlBody }],
+    attachments: [{
+      content: Utilities.base64Encode(blob.getBytes()),
+      filename: blob.getName()
+    }]
+  };
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + PropertiesService.getScriptProperties().getProperty('SENDGRID_KEY')
+    },
+    payload: JSON.stringify(payload)
+  };
+  UrlFetchApp.fetch('https://api.sendgrid.com/v3/mail/send', options);
 }
 
 /* -------- Цена по код -------- */

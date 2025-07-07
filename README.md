@@ -23,7 +23,8 @@
 1. Създайте нов проект в [Google Apps Script](https://script.google.com/).
 2. Качете всички файлове от това репо в проекта (File > New > Script file / HTML file).
 3. Отворете `appsscript.json` и се уверете, че необходимите OAuth права са зададени.
-4. Разположете скрипта като уеб приложение (Deploy > New deployment > Web app) и позволете достъп до всеки, който има връзката.
+4. В **Project Settings > Script Properties** създайте ключ `SENDGRID_KEY` и въведете вашия API ключ на SendGrid.
+5. Разположете скрипта като уеб приложение (Deploy > New deployment > Web app) и позволете достъп до всеки, който има връзката.
 
 ## Работа
 
