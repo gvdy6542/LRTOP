@@ -1448,3 +1448,45 @@ function updatePprData(storeNumber, pprNumber, tableData) {
   SpreadsheetApp.flush();
   return 'ППР е актуализиран.';
 }
+
+/**
+ * Връща справка за брака за даден магазин от началото на
+ * текущия месец до днес. Данните се четат от лист "история на брака".
+ * @param {string} storeNumber
+ * @return {{rows: any[][], total: string}}
+ */
+function getWasteReport(storeNumber) {
+  const CACHE_SHEET_ID   = '1HCESdWuLCwUv5b-nB9HCqpWH5HniCK3zpqzMgDgSAgo';
+  const CACHE_SHEET_NAME = 'история на брака';
+
+  const now   = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const tz    = Session.getScriptTimeZone();
+
+  const sheet = SpreadsheetApp.openById(CACHE_SHEET_ID)
+                                 .getSheetByName(CACHE_SHEET_NAME);
+  if (!sheet) return { rows: [], total: '0.00' };
+
+  const data  = sheet.getDataRange().getValues();
+  const rows  = [];
+  let total   = 0;
+
+  data.forEach(r => {
+    const [date, store, , name, qty, , sum] = r;
+    if (!date || String(store).trim() !== storeNumber) return;
+    const d = new Date(date);
+    if (d < start || d > now) return;
+
+    const q = parseFloat(qty) || 0;
+    const s = parseFloat(sum) || 0;
+    rows.push([
+      Utilities.formatDate(d, tz, 'dd.MM.yyyy'),
+      name,
+      q.toFixed(3),
+      s.toFixed(2)
+    ]);
+    total += s;
+  });
+
+  return { rows, total: total.toFixed(2) };
+}
