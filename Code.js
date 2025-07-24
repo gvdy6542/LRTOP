@@ -1372,3 +1372,79 @@ function buildPPRCacheToSheet() {
 
   SpreadsheetApp.flush();
 }
+
+function getPprData(storeNumber, pprNumber) {
+  const PPR_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
+
+  const mainFolder = DriveApp.getFolderById(PPR_FOLDER_ID);
+  const storeFolders = mainFolder.getFoldersByName(storeNumber);
+  if (!storeFolders.hasNext()) throw new Error('Няма папка за магазина.');
+
+  const files = storeFolders.next().getFiles();
+  let targetFile = null;
+  while (files.hasNext()) {
+    const f = files.next();
+    const name = f.getName();
+    if (name.startsWith(pprNumber + '_') && name.endsWith('_' + storeNumber)) {
+      targetFile = f;
+      break;
+    }
+  }
+  if (!targetFile) throw new Error('ППР файлът не е намерен.');
+
+  const ss = SpreadsheetApp.openById(targetFile.getId());
+  const rows = [];
+  TARGET_SHEETS.forEach(sh => {
+    const sheet = ss.getSheetByName(sh);
+    if (!sheet) return;
+    const data = sheet.getRange(2,1,sheet.getLastRow()-1,4).getValues();
+    data.forEach(([code,name,,qty]) => {
+      if (code && qty) rows.push([code,name,qty]);
+    });
+  });
+  return rows;
+}
+
+function updatePprData(storeNumber, pprNumber, tableData) {
+  const PPR_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
+
+  const mainFolder = DriveApp.getFolderById(PPR_FOLDER_ID);
+  const storeFolders = mainFolder.getFoldersByName(storeNumber);
+  if (!storeFolders.hasNext()) throw new Error('Няма папка за магазина.');
+
+  const files = storeFolders.next().getFiles();
+  let targetFile = null;
+  while (files.hasNext()) {
+    const f = files.next();
+    const name = f.getName();
+    if (name.startsWith(pprNumber + '_') && name.endsWith('_' + storeNumber)) {
+      targetFile = f;
+      break;
+    }
+  }
+  if (!targetFile) throw new Error('ППР файлът не е намерен.');
+
+  const ss = SpreadsheetApp.openById(targetFile.getId());
+
+  tableData.forEach(row => {
+    const code = row[0];
+    const qty = parseFloat(row[2]);
+    if (!code || isNaN(qty)) return;
+    for (const sh of TARGET_SHEETS) {
+      const sheet = ss.getSheetByName(sh);
+      if (!sheet) continue;
+      const vals = sheet.getRange('A:A').getValues();
+      for (let i=0; i<vals.length; i++) {
+        if (String(vals[i][0]).trim() === String(code)) {
+          sheet.getRange(i+1,4).setValue(qty);
+          return;
+        }
+      }
+    }
+  });
+
+  SpreadsheetApp.flush();
+  return 'ППР е актуализиран.';
+}
