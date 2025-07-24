@@ -1,5 +1,4 @@
 const MAIN_SS_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени 
-const PPR_HISTORY_SHEET_ID = '14CAbMpgzss2KYF6hAiOqKBgdkJQFA8f4wE79bEgYe2k';
 
 var processedFilesList = [];
 
@@ -907,135 +906,469 @@ function uploadXlsxDataToFile(fileContent, targetFileName) {
     return false;
   }
 }
+function savePPRData(storeName, dateString, tableData, pprNumber, note, reasonType) {
+  if (!pprNumber) throw new Error("❗ Моля, въведете номер на ППР.");
 
-function savePPRData(storeName,dateString,tableData,pprNumber,note,reasonType){
-  if(!pprNumber) throw new Error('❗ Моля, въведете номер на ППР.');
+  const TEMPLATE_ID = '1KBeWbFlYDMXPoMxxz4H0YvfWLQh2ZdK4i_9iMGk9H4I';
+  const DESTINATION_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА', 'МЛЯКО', 'АГНЕШКО', 'ГОВЕЖДО', 'МЛЕНИ', 'МЕСО', 'КОЛБАСИ'];
+  const EMAIL = 'sklad.pld@dmc.farm,mesokombinat_dobrotica@abv.bg,kristiyan.stoynev@dmc.farm, order@dmc.farm';
 
-  /* 1. Проверяваме в история-таблицата */
-  const histSh = SpreadsheetApp.openById(PPR_HISTORY_SHEET_ID).getSheetByName('ППР ИСТОРИЯ');
-  const used   = histSh.getRange(2,1,histSh.getLastRow()-1,1).getValues().flat();
-  if(used.includes(String(pprNumber).trim()))
-      throw new Error('❌ ТОЗИ НОМЕР НА ППР ВЕЧЕ Е ИЗПОЛЗВАН!');
+  try {
+    const parentFolder = DriveApp.getFolderById(DESTINATION_FOLDER_ID);
+    const subfolders = parentFolder.getFoldersByName(storeName);
+    const targetSubfolder = subfolders.hasNext() ? subfolders.next() : parentFolder.createFolder(storeName);
 
-  /* 2. Генерираме PPR файла от шаблон */
-  const TEMPLATE_ID            = '1KBeWbFlYDMXPoMxxz4H0YvfWLQh2ZdK4i_9iMGk9H4I';
-  const DESTINATION_FOLDER_ID  = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
-  const TARGET_SHEETS          = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
-  const EMAIL_TO               = 'v.likov@dmc.farm, sklad.pld@dmc.farm, account@ovcharovo.com, m_margitina@abv.bg, kristiyan.stoynev@dmc.farm';
+    const templateFile = DriveApp.getFileById(TEMPLATE_ID);
+    const fileName = `${pprNumber}_${dateString}_${storeName}`;
+    const newFile = templateFile.makeCopy(fileName, targetSubfolder);
+    const spreadsheet = SpreadsheetApp.openById(newFile.getId());
 
-  const parent = DriveApp.getFolderById(DESTINATION_FOLDER_ID);
-  const sub    = parent.getFoldersByName(storeName).hasNext()
-                 ? parent.getFoldersByName(storeName).next()
-                 : parent.createFolder(storeName);
+    // Записваме типа в sheet "МЕТА"
+    let metaSheet = spreadsheet.getSheetByName("МЕТА");
+    if (!metaSheet) metaSheet = spreadsheet.insertSheet("МЕТА");
+    metaSheet.getRange("A1").setValue(reasonType || "");
 
-  const fileName   = `${pprNumber}_${dateString}_${storeName}`;
-  const newFile    = DriveApp.getFileById(TEMPLATE_ID).makeCopy(fileName,sub);
-  const ss         = SpreadsheetApp.openById(newFile.getId());
+    const notFound = [];
 
-  /* записваме типа */
-  const meta = ss.getSheetByName('МЕТА') || ss.insertSheet('МЕТА');
-  meta.getRange('A1').setValue(reasonType||'');
+    tableData.forEach(row => {
+      const [code, name, barcode, qtyStr] = row;
+      const quantity = parseFloat(qtyStr);
+      if (!code || isNaN(quantity)) return;
 
-  /* 3. Прехвърляме данните */
-  const notFound=[];
-  tableData.forEach(row=>{
-    const [code,name,barcode,qtyStr] = row;
-    const qty = parseFloat(qtyStr);
-    if(!code || isNaN(qty)) return;
+      let found = false;
+      for (const sheetName of TARGET_SHEETS) {
+        const sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) continue;
 
-    let done=false;
-    for(const shtName of TARGET_SHEETS){
-      const sht = ss.getSheetByName(shtName);
-      if(!sht) continue;
-      const colA = sht.getRange('A:A').getValues().flat();
-      const idx  = colA.findIndex(c=>String(c).trim()===String(code).trim());
-      if(idx>-1){
-        const cell = sht.getRange(idx+1,4);
-        cell.setValue((parseFloat(cell.getValue())||0)+qty);
-        done=true; break;
+        const values = sheet.getRange("A:A").getValues();
+        for (let i = 0; i < values.length; i++) {
+          if (String(values[i][0]).trim() === String(code).trim()) {
+            const cell = sheet.getRange(i + 1, 4);
+            const current = parseFloat(cell.getValue()) || 0;
+            cell.setValue(current + quantity);
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
       }
+
+      if (!found) notFound.push([code, name, quantity]);
+    });
+
+    if (notFound.length > 0) {
+      let nfSheet = spreadsheet.getSheetByName('НЕРАЗПОЗНАТИ АРТИКУЛИ');
+      if (nfSheet) spreadsheet.deleteSheet(nfSheet);
+      nfSheet = spreadsheet.insertSheet('НЕРАЗПОЗНАТИ АРТИКУЛИ');
+      nfSheet.getRange(1, 1, 1, 3).setValues([["Артикулен номер", "Име", "Количество"]]);
+
+      const grouped = {};
+      notFound.forEach(([code, name, qty]) => {
+        if (!grouped[code]) grouped[code] = { name, qty: 0 };
+        grouped[code].qty += qty;
+      });
+
+      const rows = Object.entries(grouped).map(([code, obj]) => [code, obj.name, obj.qty]);
+      nfSheet.getRange(2, 1, rows.length, 3).setValues(rows);
     }
-    if(!done) notFound.push([code,name,qty]);
+
+    SpreadsheetApp.flush();
+
+    const url = newFile.getUrl();
+    const exportUrl = `https://docs.google.com/spreadsheets/d/${newFile.getId()}/export?format=xlsx`;
+    const token = ScriptApp.getOAuthToken();
+    const response = UrlFetchApp.fetch(exportUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const attachment = response.getBlob().setName(fileName + ".xlsx");
+
+   // 1. Построй HTML таблица с 6 колони
+let htmlTable = `
+  <table border="1" cellpadding="6" cellspacing="0"
+         style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;margin-top:10px;">
+    <thead style="background:#f0f0f0;">
+      <tr>
+        <th>Код</th>
+        <th>Име</th>
+        <th>Баркод</th>
+        <th>Количество</th>
+        <th>Ед. цена</th>
+        <th>Общо</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+let grandTotal = 0;  // ще акумулираме общата сума
+tableData.forEach(row => {
+  const [code, name, barcode, qty, unitPrice, total] = row;
+  const q  = parseFloat(qty);
+  const up = parseFloat(unitPrice);
+  const to = parseFloat(total);
+  grandTotal += to;
+
+  htmlTable += `
+    <tr>
+      <td>${code}</td>
+      <td>${name}</td>
+      <td>${barcode}</td>
+      <td style="text-align:right;">${q.toFixed(3)}</td>
+      <td style="text-align:right;">${up.toFixed(2)}</td>
+      <td style="text-align:right;">${to.toFixed(2)}</td>
+    </tr>`;
+});
+
+htmlTable += `</tbody>
+  <tfoot>
+    <tr style="background:#e0e0e0;">
+      <td colspan="5" style="text-align:right;"><strong>Общо:</strong></td>
+      <td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td>
+    </tr>
+  </tfoot>
+</table>`;
+
+// 2. Изпращаме имейла, вграждайки новата htmlTable
+MailApp.sendEmail({
+  to:       EMAIL,
+  subject:  `ППР №${pprNumber} за ${storeName} (${dateString})`,
+  htmlBody: `
+    <div style="font-family:Arial,sans-serif;color:#333;font-size:16px;">
+      <p>✅ <strong>Данните от ППР №${pprNumber}</strong></p>
+      <p>
+        🏪 <strong>Магазин:</strong> ${storeName}<br>
+        📅 <strong>Дата:</strong> ${dateString}<br>
+        📂 <strong>Файл в Google Таблици:</strong>
+        <a href="${url}" target="_blank" style="color:#1a73e8;">Отвори файла</a>
+      </p>
+      ${note ? `<p><strong>Причина:</strong> ${note}</p>` : ''}
+      ${reasonType ? `<p><strong>Тип ППР:</strong> ${reasonType}</p>` : ''}
+      <p><strong>Въведени артикули:</strong></p>
+      ${htmlTable}
+      <hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">
+      <p style="color:#2e7d32;font-size:16px;">
+        С най-добри пожелания,<br>
+        
+      </p>
+      <p style="color:#999;font-size:13px;">
+        ⚠️ Този имейл е автоматично генериран.
+      </p>
+    </div>`,
+  attachments: [attachment]
+});
+
+
+    return `✅ Данните са записани. Имейл с прикачен Excel файл е изпратен на ${EMAIL}`;
+  } catch (e) {
+    Logger.log("ГРЕШКА В savePPRData: " + e.message);
+    throw new Error("❌ Грешка при създаване на файла: " + e.message);
+  }
+}
+
+
+
+//function testMailAppPermission() {
+ // MailApp.sendEmail({
+  //  to: "VELICHKO_LIKOV@abv.bg",
+  //  subject: "⚙️ Тест на MailApp разрешение",
+ //   body: "Този имейл е изпратен с цел да активира нужните разрешения за MailApp.sendEmail."
+ // });
+//}
+
+
+
+
+function sendDailyPPRReport() {
+  const CACHE_SHEET_ID   = '1HCESdWuLCwUv5b-nB9HCqpWH5HniCK3zpqzMgDgSAgo';
+  const CACHE_SHEET_NAME = 'история на брака';
+  const EMAILS = 'sklad.pld@dmc.farm,kristiyan.stoynev@dmc.farm, v.likov@dmc.farm, m_margitina@abv.bg';
+  const STORE_NAMES = {
+  '810000': 'С- София, ТЦ Боила',
+  '810001': 'М- София, жк. Люлин 1, бл.3 вх. А',
+  '810002': 'М- София, жк. Младост 3, бл. 304',
+  '810003': 'М- София, бул. Хр. Ботев 59',
+  '810004': 'М- София, ул. Дойран 10а',
+  '810005': 'М- София, бул. К. Величков',
+  '810006': 'М- София, бул. Ал. Дондуков 50',
+  '810007': 'М- София, жк. Младост 1, Магазин 6',
+  '810008': 'М- София, жк. Младост 1, Магазин 18',
+  '840001': 'М- Пловдив, ул. Житен пазар 5',
+  '840002': 'М- Пловдив, ул. Солунска 1а',
+  '840003': 'М- Пловдив, бул. Шипка 7, ет. 1, обект 19',
+  '840004': 'М- Пловдив, бул. Дунав 66',
+  '840005': 'М- Пловдив, ул. Петко Петков 11-13',
+  '840007': 'М- Пловдив, ул. Георги Кондолов 3',
+  '840008': 'М- Пловдив, ул. Георги Измирлиев 65, ет. 1',
+  '840009': 'М- Пловдив, бул. Васил Априлов 84',
+  '840010': 'М- Пловдив, ул. Славееви гори 95',
+  '840011': 'М- Пловдив, ул. Патриарх Евтимий 24',
+  '842180': 'С- Цалапица, ул. Тодор Ламбов 2а',
+  '842181': 'М- Цалапица, ул. Тодор Ламбов 2а',
+  '842182': 'ЕМ- Цалапица, ул. Тодор Ламбов 2а',
+  '843001': 'М- Карлово, ул. Свежен 6',
+  '844001': 'М- Пазарджик, ул. Ал. Стамболийски 38',
+  '860002': 'М- Ст. Загора, ул. Пазарска 13',
+  '860003': 'М- Ст. Загора, бул. Цар Симеон Велики 55',
+  '863001': 'М- Хасково, бул. България 136 б',
+  '876001': 'М- Тутракан, ул. Гео Милев 33',
+  '880001': 'М- Бургас, бул. Демокрация 100',
+  '880002': 'М- Бургас, жк. Меден Рудник, бл. 258, вх. А',
+  '888888': 'Изложения',
+  '890001': 'М- Варна, ЦКП до сладкарница Атлант',
+  '890002': 'М- Варна, ул. Пирин 2',
+  '890003': 'М- Варна, ул. Георги Бенковски 42',
+  '890004': 'М- Варна, ул. Иван Вазов 41-43',
+  '890005': 'М- Варна, ул. Васил Друмев 21',
+  '890006': 'М- Варна, кв. Виница, ул. Цар Борис ІІІ № 10',
+  '890007': 'М- Варна, Пазар Чаталджа обект 40 (затворен)',
+  '890008': 'М- Варна, Пазар Чайка',
+  '890009': 'М- Варна, ул. Д. Икономов 34',
+  '890010': 'М- Варна, Пазар Чаталджа 12-13',
+  '892951': 'М- Ген. Колево, Чаира',
+  '892952': 'Г- Ген. Колево, Чаира',
+  '893001': 'М- Добрич, ул. Отец Паисий 23',
+  '893002': 'М- Добрич, ЦКП Гъбката',
+  '893003': 'М- Добрич, ул. Хр. Ботев 91',
+  '893004': 'М- Добрич, ул. Хан Аспарух 8',
+  '893005': 'М- Добрич, жк. Добротица бл. 46',
+  '893006': 'М- Добрич, ул. 25-ти септември 58',
+  '893951': 'М- Овчарово, Стопански двор',
+  '893952': 'Г- Овчарово, Стопански двор',
+  '893953': 'Р- Овчарово, Стопански двор',
+  '895001': 'М- Ген. Тошево, ул. Дочо Михайлов 22',
+  '896001': 'М- Балчик, ул. Хр. Ботев 39',
+  '896401': 'М- Соколово, ул. Кирил и Методий',
+  '896402': 'Г- Соколово, ул. Кирил и Методий',
+  '896491': 'М- Кранево, път към Албена',
+  '896492': 'Г- Кранево, път към Албена',
+  '896502': 'М- Каварна, ул. Георги Кирков 7',
+  '896503': 'Г- Каварна, ул. Георги Кирков 7',
+  '896801': 'М- Шабла, ул. П. Българанов 6',
+  '897001': 'М- Шумен, ул. Цар Освободител 83',
+  'HO':      'Главен офис',
+  'TESTDOBRI4': 'Тест Магазин Добрич',
+  'TESTVARNA':  'Тест Магазин Варна'
+};
+
+
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear  = today.getFullYear();
+  const todayStr     = Utilities.formatDate(today, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+
+  const sheet = SpreadsheetApp.openById(CACHE_SHEET_ID).getSheetByName(CACHE_SHEET_NAME);
+  const data  = sheet.getDataRange().getValues();
+
+  const storesMap = {};
+
+  data.forEach(([date, store, code, name, qty, unit, total]) => {
+    const d = new Date(date);
+    if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return;
+
+    if (!storesMap[store]) storesMap[store] = {};
+    if (!storesMap[store][code]) {
+      storesMap[store][code] = { name, qty: 0, unit: parseFloat(unit) || 0 };
+    }
+
+    storesMap[store][code].qty += parseFloat(qty) || 0;
   });
 
-  if(notFound.length){
-    let nf = ss.getSheetByName('НЕРАЗПОЗНАТИ АРТИКУЛИ');
-    if(nf) ss.deleteSheet(nf);
-    nf = ss.insertSheet('НЕРАЗПОЗНАТИ АРТИКУЛИ');
-    nf.getRange(1,1,1,3).setValues([['Артикулен номер','Име','Количество']]);
-    const grouped={};
-    notFound.forEach(([c,n,q])=>{
-      if(!grouped[c]) grouped[c]={n, q:0};
-      grouped[c].q+=q;
+  let fullHtmlBody = `
+    <div style="font-family:Arial,sans-serif;font-size:15px">
+      <h1>📋 Месечен отчет по ППР (само БРАК) – към ${todayStr}</h1>`;
+
+  for (let store in storesMap) {
+    let rows = '';
+    let totalSum = 0;
+
+    Object.entries(storesMap[store]).forEach(([code, info]) => {
+      const amount = info.qty * info.unit;
+      totalSum += amount;
+      rows += `
+        <tr>
+          <td>${code}</td>
+          <td>${info.name}</td>
+          <td style="text-align:right;">${info.qty.toFixed(3)}</td>
+          <td style="text-align:right;">${info.unit.toFixed(2)}</td>
+          <td style="text-align:right;">${amount.toFixed(2)}</td>
+        </tr>`;
     });
-    const rows = Object.entries(grouped).map(([c,o])=>[c,o.n,o.q]);
-    nf.getRange(2,1,rows.length,3).setValues(rows);
+
+    rows += `
+      <tr style="font-weight:bold; background:#f9f9f9;">
+        <td colspan="4" style="text-align:right;">Общо за ${store}:</td>
+        <td style="text-align:right;">${totalSum.toFixed(2)}</td>
+      </tr>`;
+
+    fullHtmlBody += `
+     <h2>🏪 Магазин: ${STORE_NAMES[store] || store}</h2>
+
+      <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; margin-top:10px;">
+        <thead style="background:#f0f0f0;">
+          <tr>
+            <th>Код</th>
+            <th>Име</th>
+            <th>Количество</th>
+            <th>Ед. цена</th>
+            <th>Общо</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <hr style="margin:40px 0;">`;
+  }
+
+  fullHtmlBody += `
+      <p style="color:#777;font-size:13px; margin-top:30px;">
+        ⚠️ Този имейл е автоматично генериран. Моля, не отговаряйте.
+      </p>
+    </div>`;
+
+  MailApp.sendEmail({
+    to: EMAILS,
+    subject: `📋 Месечен отчет по ППР (само БРАК) – към ${todayStr}`,
+    htmlBody: fullHtmlBody
+  });
+}
+
+
+
+
+
+
+
+
+
+/* 2. Нова безопасна функция – чете директно от Лист1 */
+function findItemDetailsByBarcode_MAIN(barcode) {
+  const sheet = SpreadsheetApp.openById(MAIN_SS_ID)
+                              .getSheetByName('Лист1');
+  if (!sheet) return null;            // ако случайно липсва лист
+
+  const data = sheet.getRange('A:C').getValues();   // A-код | B-име | C-баркод
+  for (const row of data) {
+    if (String(row[2]) === String(barcode)) {
+      return { itemCode: row[0], itemName: row[1], itemBarcode: row[2] };
+    }
+  }
+  return null;                        // няма съвпадение
+}
+/* === цена по артикулен код от Лист1 === */
+/**
+ * Връща единична цена от „Лист1“
+ * – кодът е в колона A (или C); цената – в колона F
+ * – поддържа “92,00”, “92.00”, “92,50 лв.” и т.н.
+ * @param {string|number} itemCode
+ * @return {number|null}
+ */
+function getPriceByCode(itemCode) {
+  const sheet = SpreadsheetApp.openById(MAIN_SS_ID)
+                              .getSheetByName('Лист1');
+  if (!sheet) return null;
+
+  const rows = sheet.getRange('A:F').getValues();   // A-код | F-цена
+  for (const r of rows) {
+    // съвпадение по код в A или C
+    const codeA = String(r[0]).trim();
+    const codeC = String(r[2]).trim();
+    if (codeA === String(itemCode) || codeC === String(itemCode)) {
+
+      // чистим цената – махаме букви/интервали, заменяме запетаи с точки
+      const raw = String(r[5])
+                    .replace(/[^0-9.,]/g, '')   // само цифри . ,
+                    .replace(',', '.')
+                    .trim();
+
+      const price = parseFloat(raw);
+      return isNaN(price) ? null : price;       // valid number → връщаме
+    }
+  }
+  return null;                                   // няма цена
+}
+
+function buildPPRCacheToSheet() {
+  const PPR_FOLDER_ID   = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const PRICES_SHEET_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';
+  const CACHE_SHEET_ID  = '1HCESdWuLCwUv5b-nB9HCqpWH5HniCK3zpqzMgDgSAgo';
+  const CACHE_SHEET_NAME = 'история на брака';
+
+  const tz = Session.getScriptTimeZone();
+  const today = new Date();
+  const thisMonth = today.getMonth();
+  const thisYear  = today.getFullYear();
+
+  const cacheSS = SpreadsheetApp.openById(CACHE_SHEET_ID);
+  const cacheSheet = cacheSS.getSheetByName(CACHE_SHEET_NAME);
+  if (!cacheSheet) throw new Error('Липсва лист "история на брака".');
+
+  const existing = cacheSheet.getDataRange().getValues();
+  const existingKeys = new Set();
+
+  existing.forEach(row => {
+    const [date, store, code, , , , , filename] = row;
+    if (!date || !store || !code || !filename) return;
+    const normalizedDate = Utilities.formatDate(new Date(date), tz, 'yyyy-MM-dd');
+    const key = `${normalizedDate}|${store}|${code}|${filename}`;
+    existingKeys.add(key);
+  });
+
+  const folder = DriveApp.getFolderById(PPR_FOLDER_ID);
+  const subfolders = folder.getFolders();
+
+  while (subfolders.hasNext()) {
+    const subfolder = subfolders.next();
+    const storeName = subfolder.getName();
+    const files = subfolder.getFiles();
+
+    while (files.hasNext()) {
+      const file = files.next();
+      const parts = file.getName().split('_');
+      if (parts.length < 3) continue;
+
+      const dateStr = parts[1];
+      const fileDate = new Date(dateStr);
+      if (fileDate.getMonth() !== thisMonth || fileDate.getFullYear() !== thisYear) continue;
+
+      const normalizedDate = Utilities.formatDate(fileDate, tz, 'yyyy-MM-dd');
+      const ss = SpreadsheetApp.openById(file.getId());
+      const meta = ss.getSheetByName('МЕТА');
+      if (!meta || meta.getRange('A1').getValue() !== 'Брак') continue;
+
+      const sheets = ss.getSheets();
+      for (const sheet of sheets) {
+        const sheetName = sheet.getName();
+        if (sheetName === 'МЕТА') continue;
+
+        const values = sheet.getRange(`A2:D${sheet.getLastRow()}`).getValues();
+
+        values.forEach(([code, name, , qty]) => {
+          if (!code || !qty) return;
+
+          const key = `${normalizedDate}|${storeName}|${code}|${file.getName()}`;
+          if (existingKeys.has(key)) return;
+
+          const unitPrice = getPriceByCode(code) || 0;
+          const total = parseFloat(qty) * unitPrice;
+
+          cacheSheet.appendRow([
+            normalizedDate,
+            storeName,
+            code,
+            name,
+            parseFloat(qty).toFixed(3),
+            unitPrice.toFixed(2),
+            total.toFixed(2),
+            file.getName() // новата колона: Име на файла
+          ]);
+
+          existingKeys.add(key);
+        });
+      }
+    }
   }
 
   SpreadsheetApp.flush();
-
-  /* 4. Добавяме записа в историята */
-  histSh.appendRow([pprNumber,storeName,dateString,Session.getActiveUser().getEmail()]);
-
-  /* 5. Изкарваме Excel + изпращаме мейл */
-  const exportUrl = `https://docs.google.com/spreadsheets/d/${newFile.getId()}/export?format=xlsx`;
-  const blob      = UrlFetchApp.fetch(exportUrl,{headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()}})
-                        .getBlob().setName(fileName+'.xlsx');
-
-  sendViaSendGrid(
-     EMAIL_TO,
-     `ППР №${pprNumber} – ${storeName} (${dateString})`,
-     `<p>✅ ППР №${pprNumber} е въведен.</p>
-        <p><strong>Магазин:</strong> ${storeName}<br>
-           <strong>Дата:</strong> ${dateString}</p>
-        ${note?`<p><strong>Причина:</strong> ${note}</p>`:''}
-        ${reasonType?`<p><strong>Тип ППР:</strong> ${reasonType}</p>`:''}
-        <p><a href="${newFile.getUrl()}" target="_blank">Отвори файла в Google Таблици</a></p>`,
-     blob
-  );
-
-  return '✅ Записът е направен и имейлът е изпратен.';
-}
-
-/**
- * Изпраща имейл чрез SendGrid API.
- * @param {string} to        - Списък получатели, разделени със запетаи.
- * @param {string} subject   - Тема на имейла.
- * @param {string} htmlBody  - HTML съдържание на имейла.
- * @param {Blob}   blob      - Прикачен файл за изпращане.
- */
-function sendViaSendGrid(to, subject, htmlBody, blob) {
-  var payload = {
-    personalizations: [{ to: to.split(/,\s*/) .map(e => ({ email: e.trim() })) }],
-    from: { email: 'noreply@yourdomain.com' },
-    subject: subject,
-    content: [{ type: 'text/html', value: htmlBody }],
-    attachments: [{
-      content: Utilities.base64Encode(blob.getBytes()),
-      filename: blob.getName()
-    }]
-  };
-  var options = {
-    method: 'post',
-    contentType: 'application/json',
-    headers: {
-      Authorization: 'Bearer ' + PropertiesService.getScriptProperties().getProperty('SENDGRID_KEY')
-    },
-    payload: JSON.stringify(payload)
-  };
-  UrlFetchApp.fetch('https://api.sendgrid.com/v3/mail/send', options);
-}
-
-/* -------- Цена по код -------- */
-function getPriceByCode(code){
-  const sh = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
-  if(!sh) return null;
-  const rows = sh.getRange('A:F').getValues();
-  for(const r of rows){
-    if(String(r[0]).trim()===String(code) || String(r[2]).trim()===String(code)){
-      const price = parseFloat(String(r[5]).replace(/[^0-9.,]/g,'').replace(',','.'));
-      return isNaN(price)?null:price;
-    }
-  }
-  return null;
 }

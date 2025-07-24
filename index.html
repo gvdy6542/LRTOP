@@ -442,8 +442,22 @@
     <header style="text-align: center;">
       <h1>Недко Недков - Овчарово ЕООД</h1>
     </header>
+     <div style="margin: 15px auto; padding: 15px; border: 1px solid #ccc; border-radius: 10px; background: #f3fff3; max-width: 320px;">
+  <h3 style="margin-top: 0; font-size: 18px; color: #064e3b;">💱 Калкулатор ЛВ ⇄ ЕВРО</h3>
+  <label style="display:block; margin-bottom:8px;">
+    Лева:
+    <input type="number" id="bgn" step="0.01" style="width: 100%; padding: 6px; font-size: 16px;">
+  </label>
+  <label style="display:block; margin-bottom:8px;">
+    Евро:
+    <input type="number" id="eur" step="0.01" style="width: 100%; padding: 6px; font-size: 16px;">
+  </label>
+</div>
 
     <input type="text" id="store" placeholder="Магазин" style="width:4cm;">
+    
+   
+
 
     <h1 style="text-align: center;">Сканиране на баркод</h1>
     <div id="nameFields">
@@ -474,7 +488,9 @@
        <!-- 1. Бутон за Въвеждане на ППР -->
        <button class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
 
+       
     </div>
+    
 
     <div class="table-container">
       <table id="itemDetails" style="display:none;">
@@ -642,6 +658,31 @@
 
 
   <script>
+const FIXED_RATE = 1.95583;
+
+  const bgnInput = document.getElementById('bgn');
+  const eurInput = document.getElementById('eur');
+
+  let isUpdating = false;
+
+  bgnInput.addEventListener('input', () => {
+    if (isUpdating) return;
+    isUpdating = true;
+    const bgn = parseFloat(bgnInput.value);
+    eurInput.value = isNaN(bgn) ? '' : (bgn / FIXED_RATE).toFixed(2);
+    isUpdating = false;
+  });
+
+  eurInput.addEventListener('input', () => {
+    if (isUpdating) return;
+    isUpdating = true;
+    const eur = parseFloat(eurInput.value);
+    bgnInput.value = isNaN(eur) ? '' : (eur * FIXED_RATE).toFixed(2);
+    isUpdating = false;
+  });
+
+
+
    // 1. Модален прозорец при незавършена ревизия
 function showResumePrompt(message, data) {
   const overlay = document.createElement('div');
