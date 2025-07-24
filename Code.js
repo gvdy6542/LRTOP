@@ -1474,8 +1474,9 @@ function getWasteReport(storeNumber) {
   let total   = 0;
 
   data.forEach(r => {
-    const [date, store, , name, qty, , sum] = r;
+    const [date, store, , name, qty, , sum, , type] = r;
     if (!date || String(store).trim() !== storeNumber) return;
+    if (type !== 'Брак') return;
     const d = new Date(date);
     if (d < start || d > now) return;
 
