@@ -1335,7 +1335,8 @@ function buildPPRCacheToSheet() {
       const normalizedDate = Utilities.formatDate(fileDate, tz, 'yyyy-MM-dd');
       const ss = SpreadsheetApp.openById(file.getId());
       const meta = ss.getSheetByName('МЕТА');
-      if (!meta || meta.getRange('A1').getValue() !== 'Брак') continue;
+      if (!meta) continue;
+      const reasonType = meta.getRange('A1').getValue();
 
       const sheets = ss.getSheets();
       for (const sheet of sheets) {
@@ -1361,7 +1362,8 @@ function buildPPRCacheToSheet() {
             parseFloat(qty).toFixed(3),
             unitPrice.toFixed(2),
             total.toFixed(2),
-            file.getName() // новата колона: Име на файла
+            file.getName(),
+            reasonType
           ]);
 
           existingKeys.add(key);
