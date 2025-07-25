@@ -14,6 +14,10 @@ function loadinterfacePage() {
   return HtmlService.createHtmlOutputFromFile('interface.html').getContent();
 }
 
+function loadLabelsPage() {
+  return HtmlService.createHtmlOutputFromFile('labels.html').getContent();
+}
+
 function processBarcode(barcode) {
   let itemDetails = findItemDetailsByBarcode(barcode);      // старото търсене
   if (!itemDetails) itemDetails = findItemDetailsByBarcode_MAIN(barcode); // ← fallback
