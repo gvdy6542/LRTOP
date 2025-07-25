@@ -1052,7 +1052,10 @@ function downloadAndSave() {
     // 14. Open extra pages
     function openReference() {
       google.script.run.withSuccessHandler(html => {
-        let w = window.open(); w.document.write(html); w.document.close();
+        const w = window.open();
+        w.document.write(html);
+        w.document.close();
+        w.google = google; // expose google.script.run
       }).loadReferencePage();
     }
     function openinterface() {
@@ -1063,7 +1066,10 @@ function downloadAndSave() {
 
     function openLabels() {
       google.script.run.withSuccessHandler(html => {
-        let w = window.open(); w.document.write(html); w.document.close();
+        const w = window.open();
+        w.document.write(html);
+        w.document.close();
+        w.google = google; // expose google.script.run
       }).loadLabelsPage();
     }
 
