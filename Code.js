@@ -1,4 +1,5 @@
-const MAIN_SS_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени 
+const MAIN_SS_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени
+const EUR_RATE   = 1.95583;                                           // курс евро
 
 var processedFilesList = [];
 
@@ -1496,4 +1497,67 @@ function getWasteReport(storeNumber) {
   });
 
   return { rows, total: total.toFixed(2) };
+}
+
+/* ==================== Label Generator ==================== */
+
+function fetchProductByBarcode(barcode) {
+  const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
+  if (!sheet) return null;
+
+  const rows = sheet.getRange('A:F').getValues();
+  for (const r of rows) {
+    if (String(r[2]) === String(barcode)) {
+      const rawPrice = String(r[5])
+        .replace(/[^0-9.,]/g, '')
+        .replace(',', '.')
+        .trim();
+      const price = parseFloat(rawPrice);
+      return {
+        code: r[0],
+        name: r[1],
+        barcode: r[2],
+        price: isNaN(price) ? null : price
+      };
+    }
+  }
+  return null;
+}
+
+function fetchPreviewData(barcodes) {
+  if (!Array.isArray(barcodes)) return [];
+  return barcodes
+    .map(bc => fetchProductByBarcode(bc))
+    .filter(item => item);
+}
+
+function generateLabelsSheet(items) {
+  if (!Array.isArray(items) || !items.length) {
+    throw new Error('Липсват данни за етикети.');
+  }
+
+  const ss = SpreadsheetApp.create('Етикети');
+  const sh = ss.getActiveSheet();
+  sh.getRange(1, 1, 1, 5).setValues([
+    ['Код', 'Име', 'Баркод', 'Цена (лв)', 'Цена (€)']
+  ]);
+
+  const data = items.map(it => [
+    it.code,
+    it.name,
+    it.barcode,
+    it.price ? it.price.toFixed(2) : '',
+    it.price ? (it.price / EUR_RATE).toFixed(2) : ''
+  ]);
+
+  sh.getRange(2, 1, data.length, 5).setValues(data);
+  return ss.getUrl();
+}
+
+function runGenerateLabels(barcodes) {
+  const items = fetchPreviewData(barcodes);
+  if (!items.length) {
+    throw new Error('Няма намерени продукти.');
+  }
+  return generateLabelsSheet(items);
 }

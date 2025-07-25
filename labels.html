@@ -18,6 +18,11 @@
   <label>Цена:
     <input type="text" id="price">
   </label>
+  <label>Баркод:
+    <input type="text" id="barcodeField">
+  </label>
+  <button onclick="scanBarcode()">Сканирай</button>
+  <button onclick="generateSheet()">Генерирай лист</button>
   <button onclick="addLabel()">Добави етикет</button>
   <button onclick="printLabels()">Печат</button>
   <div id="labelsContainer"></div>
@@ -41,6 +46,37 @@ function printLabels() {
   w.focus();
   w.print();
   w.close();
+}
+
+const EUR_RATE = 1.95583;
+let scanned = [];
+
+function scanBarcode() {
+  const bc = document.getElementById('barcodeField').value.trim();
+  if (!bc) return;
+  google.script.run.withSuccessHandler(item => {
+    if (!item) {
+      alert('Артикулът не е намерен.');
+      return;
+    }
+    const priceEur = item.price ? (item.price / EUR_RATE).toFixed(2) : '';
+    const div = document.createElement('div');
+    div.className = 'label';
+    div.textContent = `${item.name} - ${item.price.toFixed(2)} лв / ${priceEur} €`;
+    document.getElementById('labelsContainer').appendChild(div);
+    scanned.push(item.barcode);
+    document.getElementById('barcodeField').value = '';
+  }).fetchProductByBarcode(bc);
+}
+
+function generateSheet() {
+  if (!scanned.length) {
+    alert('Няма сканирани артикули.');
+    return;
+  }
+  google.script.run.withSuccessHandler(url => {
+    window.open(url, '_blank');
+  }).runGenerateLabels(scanned);
 }
 </script>
 </body>
