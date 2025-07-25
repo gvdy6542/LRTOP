@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <title>Генератор на етикети</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    label, input { display: block; margin-bottom: 8px; }
+    #labelsContainer { margin-top: 20px; }
+    .label { border: 1px solid #000; padding: 5px; margin: 5px 0; width: fit-content; }
+  </style>
+</head>
+<body>
+  <h1>Генериране на етикети</h1>
+  <label>Текст на етикета:
+    <input type="text" id="labelText">
+  </label>
+  <label>Цена:
+    <input type="text" id="price">
+  </label>
+  <button onclick="addLabel()">Добави етикет</button>
+  <button onclick="printLabels()">Печат</button>
+  <div id="labelsContainer"></div>
+<script>
+function addLabel() {
+  const text = document.getElementById('labelText').value.trim();
+  const price = document.getElementById('price').value.trim();
+  if (!text && !price) return;
+  const div = document.createElement('div');
+  div.className = 'label';
+  div.textContent = text + (price ? ' - ' + price : '');
+  document.getElementById('labelsContainer').appendChild(div);
+}
+function printLabels() {
+  const html = '<html><head><title>Print</title></head><body>' +
+               document.getElementById('labelsContainer').innerHTML +
+               '</body></html>';
+  const w = window.open('', '', 'width=400,height=600');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  w.print();
+  w.close();
+}
+</script>
+</body>
+</html>

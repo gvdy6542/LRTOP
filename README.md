@@ -37,6 +37,7 @@ These allow access to Drive and Spreadsheets, external requests and sending mail
 - **index.html** – main barcode scanning UI with modals for PPR and waste reports.
 - **interface.html** – embeds a Drive folder for quick access.
 - **reference.html** – utilities for processing Drive files.
+- **labels.html** – label generator for creating and printing product labels.
 
 Notable functions in `Code.js` include:
 - `doGet()` which serves `index.html`.
