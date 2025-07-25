@@ -491,6 +491,7 @@
         <button class="green-button" onclick="openCheckPprModal()">Проверка на ППР</button>
         <!-- Бутон за справка на брака -->
         <button class="green-button" onclick="openWasteModal()">Справка на брака</button>
+        <button class="green-button" onclick="openLabels()">Етикети</button>
 
     </div>
     
@@ -1060,7 +1061,13 @@ function downloadAndSave() {
       }).loadinterfacePage();
     }
 
-    
+    function openLabels() {
+      google.script.run.withSuccessHandler(html => {
+        let w = window.open(); w.document.write(html); w.document.close();
+      }).loadLabelsPage();
+    }
+
+
     // 15. Липсващата функция: addRowToTable(...)
 function addRowToTable(articleNumber, description, barcode, quantity) {
   const tb = document.querySelector('#itemDetails tbody');
