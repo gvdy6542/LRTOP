@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <title>Генератор на етикети</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f6f8fa;
+    }
+    .panel-group {
+      max-width: 1200px;
+      margin: 20px auto;
+    }
+    .panel {
+      background: #fff;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    }
+    .panel .panel-title {
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 17px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      background: #e0e0e0;
+      border-radius: 8px 8px 0 0;
+    }
+    .panel .panel-title span { margin-right: 8px; }
+    .panel .panel-title:after {
+      content: '▼';
+      margin-left: auto;
+      font-size: 13px;
+      color: #4b4b4b;
+      transition: .2s;
+    }
+    .panel.open .panel-title:after { content: '▲'; }
+    .panel .panel-content {
+      padding: 18px 24px 10px 24px;
+      display: none;
+    }
+    .panel.open .panel-content { display: block; }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .controls-row label {
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 120px;
+    }
+    .controls-row input[type=text],
+    .controls-row input[type=number],
+    .controls-row select,
+    .controls-row input[type=color] {
+      padding: 6px;
+      font-size: 15px;
+      border: 1px solid #c1c1c1;
+      border-radius: 5px;
+      width: 100%;
+      box-sizing: border-box;
+      min-width: 90px;
+    }
+    .controls-row input[type=range] { min-width: 90px; }
+
+    .action-btn {
+      background: #0e8388;
+      color: #fff;
+      border: none;
+      font-weight: bold;
+      padding: 7px 18px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+      transition: background .2s;
+    }
+    .action-btn.red { background: #e53935 !important; }
+    .action-btn:disabled { opacity: 0.6; cursor: default; }
+
+    #preview {
+      display: grid;
+      grid-template-columns: repeat(3, 6.5cm);
+      grid-auto-rows: 4.5cm;
+      gap: 0;
+      justify-content: center;
+      background: #f6f8fa;
+      padding: 0;
+    }
+    .card {
+      width: 6.0cm;
+      height: 3.6cm;
+      background: var(--card-bg, #FFEB3B);
+      border: 2px var(--card-border-style, solid) var(--card-border, #333);
+      border-radius: var(--card-radius, 10px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 8px 4px 6px 4px;
+      box-sizing: border-box;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.11);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      overflow: hidden;
+    }
+    .delete-btn {
+      position: absolute; top: 2px; right: 2px;
+      background: #f35a5a;
+      border: none;
+      color: #fff;
+      font-size: 17px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 2;
+    }
+    .company {
+      font-size: var(--company-size, 12px);
+      font-weight: bold;
+      color: #333;
+      margin: 3px 0 0 0;
+      text-align: center;
+    }
+    .name {
+      font-size: var(--name-size, 16px);
+      font-family: var(--name-font, Arial, sans-serif);
+      font-weight: bold;
+      color: #333;
+      margin: 3px 0 0 0;
+      text-align: center;
+      line-height: 1.1;
+    }
+  .price {
+  font-size: var(--price-size, 16px);
+  font-family: var(--price-font, Arial, sans-serif);
+  font-weight: bold;
+  color: #333;
+  margin: 2px 0 0 0;
+  background: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* <-- важният момент */
+  justify-content: center;
+  line-height: 1.1;
+}
+
+
+
+
+    /* Коригиран @media print блок */
+    @media print {
+  /* 1) Настройка A4 portrait с горен margin */
+  @page {
+    size: A4 portrait;
+    /* задаваме само горен margen 10 мм, останалите 0 */
+    margin: 8mm 0mm 0mm 0mm;
+  }
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* 2) Скриваме UI */
+  .panel,
+  .panel-title,
+  .panel-content,
+  .action-btn {
+    display: none !important;
+  }
+  /* 3) Preview да запълни страницата, с допълнителен padding-top */
+  #preview {
+    width: 200mm !important;
+    height: 200mm !important; /* намалихме височината, защото вече имаме 10mm margin-top */
+    margin: 0 !important;
+    padding-top: 10mm !important; /* гарантираме горно отстояние */
+    display: grid !important;
+    grid-template-columns: repeat(3, 60mm) !important;
+    grid-template-rows: repeat(500, 36mm) !important;
+    gap: 0 !important;
+    background: #fff !important;
+  }
+  /* 4) Етикетите */
+  .card {
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 60mm !important;
+    height: 36mm !important;
+    border: 2px var(--card-border-style, solid) var(--card-border, #333) !important;
+    border-radius: var(--card-radius, 10px) !important;
+ 
+    overflow: hidden !important;
+  }
+  .card .company,
+  .card .name,
+  .card .price,
+  {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .delete-btn {
+    display: none !important;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div class="panel-group">
+    <!-- Настройки за етикет -->
+    <div class="panel" id="panel-label">
+      <div class="panel-title"><span>🟨</span>Настройки за етикет</div>
+      <div class="panel-content">
+        <div class="controls-row">
+          <label>Цвят фон:<input type="color" id="bgPicker" value="#f2fc76"></label>
+          <label>Цвят контур:<input type="color" id="borderPicker" value="#333333"></label>
+          <label>Стил контур:
+            <select id="borderStylePicker">
+              <option value="solid">Solid</option>
+              <option value="double">Double</option>
+              <option value="dotted">Dotted</option>
+              <option value="dashed">Dashed</option>
+              <option value="groove">Groove</option>
+            </select>
+          </label>
+          <label>Размер име (px):<input type="number" id="nameSize" value="22" min="10" max="32"></label>
+          <label>Размер цена (px):<input type="number" id="priceSize" value="24" min="10" max="32"></label>
+          <label>Размер фирма (px):<input type="number" id="companySize" value="18" min="8" max="32"></label>
+          <label>Шрифт име:
+            <select id="nameFont">
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Tahoma, sans-serif">Tahoma</option>
+              
+            </select>
+          </label>
+          <label>Шрифт цена:
+            <select id="priceFont">
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Tahoma, sans-serif">Tahoma</option>
+              
+            </select>
+          </label>
+          <label>Заобляне (px):<input type="number" id="radiusPicker" value="10" min="0" max="30"></label>
+        </div>
+      </div>
+    </div>
+    <!-- Настройки за текст (фирма) -->
+    <div class="panel" id="panel-text">
+      <div class="panel-title"><span>🔤</span>Настройки за текст</div>
+      <div class="panel-content">
+   <div class="controls-row">
+  <label>Фирма:
+    <input type="text" id="companyField" value="">
+  </label>
+  <label>Цвят фирма:
+    <input type="color" id="companyColor" value="#000000">
+  </label>
+</div>
+        </div>
+      </div>
+    </div>
+    <!-- Настройки за баркод -->
+    <div class="panel" id="panel-barcode">
+      <div class="panel-title"><span>📦</span>Настройки за баркод</div>
+      <div class="panel-content">
+        <div class="controls-row">
+          <label>Размер баркод (%):<input type="range" id="barcodeSize" value="0" min="0" max="0"></label>
+        </div>
+      </div>
+    </div>
+    <!-- Действия и сканиране -->
+    <div class="panel open" id="panel-actions">
+      <div class="panel-title"><span>⚡</span>Действия и сканиране</div>
+      <div class="panel-content">
+        <div class="controls-row">
+        <label style="font-size:18px;">
+  Сканирай баркод:
+  <input
+    type="text"
+    id="barcodeScan"
+    autofocus
+    placeholder="Сканирай тук"
+    style="font-size:22px;width:260px;background:#d4f8d4;border:1px solid #9ad99a;"
+  >
+</label>
+
+          <label>Име:<input type="text" id="customName" placeholder="Име"></label>
+          <label>Цена:<input type="number" id="customPrice" placeholder="Цена" step="0.01"></label>
+          <label>Код:<input type="text" id="customCode" placeholder="Код"></label>
+          <button class="action-btn red" id="btnGenerate" onclick="generate()">Стартирай</button>
+          <button class="action-btn" id="addBtn" onclick="addCustom()">Добави етикет</button>
+          <button class="action-btn" id="btnPrint" onclick="window.print()" disabled>Печат</button>
+          <button class="action-btn" onclick="clearAll()">Изчисти</button>
+        </div>
+      </div>
+    </div>
+    <!-- Визуализация на етикети -->
+    <div id="preview"></div>
+  </div>
+
+ <script>
+  // toggle на панелите
+  document.querySelectorAll('.panel-title').forEach(el => {
+    el.onclick = () => el.parentElement.classList.toggle('open');
+  });
+
+  let labels = [];
+
+  // генериране на етикети от сървъра
+  function generate(){
+    document.getElementById('btnGenerate').disabled = true;
+    google.script.run.withSuccessHandler(labs => {
+      labels = labs;
+      render();
+      document.getElementById('btnGenerate').disabled = false;
+    }).runGenerateLabels();
+  }
+
+  // добавяне на потребителски артикул
+  function addCustom(){
+    const code = document.getElementById('customCode').value.trim(),
+          name = document.getElementById('customName').value.trim(),
+          priceVal = document.getElementById('customPrice').value,
+          company = document.getElementById('companyField').value;
+    if(!code || !name || !priceVal) return;
+
+    const priceNum = parseFloat(priceVal),
+          euro = Math.floor((priceNum/1.95583)*100)/100,
+          url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' +
+                encodeURIComponent(code) + '&includetext';
+
+    labels.unshift({
+      name,
+      price: `<div style="font-size: 1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size: 0.85em;">${euro.toFixed(2)} €</div>`,
+
+
+      barcodeUrl: url
+    });
+
+    ['customCode','customName','customPrice']
+      .forEach(id => document.getElementById(id).value = '');
+    render();
+  }
+
+  // изчистване на всички етикети
+  function clearAll(){
+    labels = [];
+    render();
+  }
+
+  // рендериране на етикетите в preview
+  function render(){
+    const preview = document.getElementById('preview');
+    preview.innerHTML = '';
+
+    const bg = document.getElementById('bgPicker').value,
+          border = document.getElementById('borderPicker').value,
+          bStyle = document.getElementById('borderStylePicker').value,
+          nameSize = document.getElementById('nameSize').value + 'px',
+          priceSize = document.getElementById('priceSize').value + 'px',
+          companySize = document.getElementById('companySize').value + 'px',
+          nameFont = document.getElementById('nameFont').value,
+          priceFont = document.getElementById('priceFont').value,
+          radius = document.getElementById('radiusPicker').value + 'px',
+          company = document.getElementById('companyField').value,
+          bSize = document.getElementById('barcodeSize').value + '%';
+
+    labels.forEach((l, idx) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      [
+        bg, border, bStyle,
+        companySize, nameSize, priceSize,
+        nameFont, priceFont, radius, bSize
+      ].forEach((val, i) => {
+        const props = [
+          '--card-bg','--card-border','--card-border-style',
+          '--company-size','--name-size','--price-size',
+          '--name-font','--price-font','--card-radius','--barcode-size'
+        ];
+        card.style.setProperty(props[i], val);
+      });
+
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.textContent = '×';
+      del.addEventListener('click', () => { labels.splice(idx,1); render(); });
+      card.appendChild(del);
+
+      ['company','name','price'].forEach((cls, j) => {
+        const el = document.createElement('div');
+        el.className = cls;
+        if(cls === 'company') {
+  el.textContent = company;
+} else if(cls === 'name') {
+  el.textContent = l.name;
+} else if(cls === 'price') {
+  el.innerHTML = l.price; // <-- важна промяна
+}
+
+        el.style.fontSize = [companySize,nameSize,priceSize][j];
+        if(cls==='name')  el.style.fontFamily = nameFont;
+        if(cls==='price') el.style.fontFamily = priceFont;
+        card.appendChild(el);
+      });
+
+      const img = document.createElement('img');
+      img.className = 'barcode';
+      img.src = l.barcodeUrl;
+      img.style.width = bSize;
+      card.appendChild(img);
+
+      // добавен текст с фирма
+      const c = document.createElement('div');
+      c.className = 'company';
+      c.textContent = company;
+      c.style.fontSize   = companySize;
+      c.style.color      = document.getElementById('companyColor')?.value || '#000';
+      c.style.fontFamily = "'Times New Roman', serif";
+      card.appendChild(c);
+
+      preview.appendChild(card);
+    });
+
+    document.getElementById('btnPrint').disabled = labels.length === 0;
+  }
+
+  // Остава само един DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    const scanInput = document.getElementById('barcodeScan');
+    scanInput.focus();
+
+    scanInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+
+        const code = scanInput.value.trim();
+        scanInput.value = '';
+        scanInput.select();
+        scanInput.focus();
+
+        if (!code) return;
+
+        google.script.run
+          .withSuccessHandler(data => {
+            if (!data) {
+              alert('Артикулът не е намерен!');
+            } else {
+              document.getElementById('customCode').value  = data.code;
+              document.getElementById('customName').value  = data.name;
+              document.getElementById('customPrice').value = data.price.toFixed(2);
+              addCustom();
+            }
+          })
+          .fetchProductByBarcode(code);
+      }
+    });
+
+    // връзване на контролите за настройки към render()
+    document.querySelectorAll(
+      '#bgPicker,#borderPicker,#borderStylePicker,' +
+      '#nameSize,#priceSize,#companySize,' +
+      '#nameFont,#priceFont,#radiusPicker,#barcodeSize,#companyField'
+    ).forEach(el => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+
+    render();
+  });
+</script>
+
+</body>
+</html>

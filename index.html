@@ -487,8 +487,12 @@
        <button id="viewRevisionsBtn"  class="green-button">Преглед на ревизии</button>  <!-- НОВ -->
        <!-- 1. Бутон за Въвеждане на ППР -->
        <button class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
+       <!-- 2. Бутон за проверка/корекция на ППР -->
+        <button class="green-button" onclick="openCheckPprModal()">Проверка на ППР</button>
+        <!-- Бутон за справка на брака -->
+        <button class="green-button" onclick="openWasteModal()">Справка на брака</button>
+        <button class="green-button" onclick="openLabels()">Етикети</button>
 
-       
     </div>
     
 
@@ -653,6 +657,59 @@
     <button id="submitPPRBtn" class="green-button" onclick="submitPPR()">Запиши в ППР</button>
 
     <button class="red-button" onclick="closePPRModal()">Затвори</button>
+  </div>
+</div>
+
+<!-- Модал за справка на брака -->
+<div id="wasteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10000;">
+  <div class="modal-box" style="background:#fff; padding:24px; border-radius:16px; width:90%; max-width:600px; max-height:90vh; overflow-y:auto;">
+    <h2>Справка на брака</h2>
+    <input type="text" id="wasteStore" placeholder="№ на магазин" style="width:100%; margin-bottom:12px; font-size:18px; padding:12px; border-radius:8px;">
+    <button class="green-button" onclick="calcWaste()" style="margin-bottom:12px;">Изчисли брака</button>
+    <div class="table-container" style="max-height:300px; overflow-y:auto; margin-bottom:16px; border:1px solid #ddd; border-radius:8px;">
+      <table id="wasteTable" style="width:100%; border-collapse:collapse;">
+        <thead style="background:#f9f9f9;">
+          <tr>
+            <th>Дата</th>
+            <th>Име</th>
+            <th>Количество</th>
+            <th>Сума</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align:right;font-weight:600">Общо:</td>
+            <td id="wasteTotal">0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <button class="red-button" onclick="closeWasteModal()">Затвори</button>
+  </div>
+</div>
+
+<!-- Модал за проверка на ППР -->
+<div id="checkPprModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10000;">
+  <div class="modal-box" style="background:#fff; padding:24px; border-radius:16px; width:90%; max-width:600px; max-height:90vh; overflow-y:auto;">
+    <h2>Проверка на ППР</h2>
+    <input type="text" id="checkPprStore" placeholder="№ на магазин" style="width:100%; margin-bottom:12px; font-size:18px; padding:12px; border-radius:8px;">
+    <input type="text" id="checkPprNumber" placeholder="Номер на ППР" style="width:100%; margin-bottom:12px; font-size:18px; padding:12px; border-radius:8px;">
+    <button class="green-button" onclick="loadPprForEdit()" style="margin-bottom:12px;">Зареди ППР</button>
+    <div class="table-container" style="max-height:300px; overflow-y:auto; margin-bottom:16px; border:1px solid #ddd; border-radius:8px;">
+      <table id="checkPprTable" style="width:100%; border-collapse:collapse;">
+        <thead style="background:#f9f9f9;">
+          <tr>
+            <th>Код</th>
+            <th>Име</th>
+            <th>Количество</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button class="green-button" onclick="submitPprEdits()">Запиши промените</button>
+    <button class="red-button" onclick="closeCheckPprModal()" style="margin-left:12px;">Затвори</button>
   </div>
 </div>
 
@@ -995,7 +1052,10 @@ function downloadAndSave() {
     // 14. Open extra pages
     function openReference() {
       google.script.run.withSuccessHandler(html => {
-        let w = window.open(); w.document.write(html); w.document.close();
+        const w = window.open();
+        w.document.write(html);
+        w.document.close();
+        w.google = google; // expose google.script.run
       }).loadReferencePage();
     }
     function openinterface() {
@@ -1004,7 +1064,16 @@ function downloadAndSave() {
       }).loadinterfacePage();
     }
 
-    
+    function openLabels() {
+      google.script.run.withSuccessHandler(html => {
+        const w = window.open();
+        w.document.write(html);
+        w.document.close();
+        w.google = google; // expose google.script.run
+      }).loadLabelsPage();
+    }
+
+
     // 15. Липсващата функция: addRowToTable(...)
 function addRowToTable(articleNumber, description, barcode, quantity) {
   const tb = document.querySelector('#itemDetails tbody');
@@ -1376,6 +1445,77 @@ function confirmPPRQty(code,name,barcode,unitPrice){
   if(!qty||qty<=0){alert('Невалидно количество');return;}
   document.getElementById('quantityModal').remove();
   addToPPRTable(code,name,barcode,unitPrice);
+}
+
+function openCheckPprModal(){
+  document.querySelector('#checkPprTable tbody').innerHTML='';
+  document.getElementById('checkPprStore').value='';
+  document.getElementById('checkPprNumber').value='';
+  document.getElementById('checkPprModal').style.display='flex';
+}
+
+function closeCheckPprModal(){
+  document.getElementById('checkPprModal').style.display='none';
+}
+
+function openWasteModal(){
+  document.querySelector('#wasteTable tbody').innerHTML='';
+  document.getElementById('wasteTotal').textContent='0.00';
+  document.getElementById('wasteStore').value='';
+  document.getElementById('wasteModal').style.display='flex';
+}
+
+function closeWasteModal(){
+  document.getElementById('wasteModal').style.display='none';
+}
+
+function calcWaste(){
+  const store=document.getElementById('wasteStore').value.trim();
+  if(!store){alert('Моля, въведете № на магазин.');return;}
+  google.script.run.withFailureHandler(e=>alert('⚠️ '+e.message))
+    .withSuccessHandler(res=>{
+      const tbody=document.querySelector('#wasteTable tbody');
+      tbody.innerHTML='';
+      res.rows.forEach(r=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('wasteTotal').textContent=res.total;
+    }).getWasteReport(store);
+}
+
+function loadPprForEdit(){
+  const store=document.getElementById('checkPprStore').value.trim();
+  const num=document.getElementById('checkPprNumber').value.trim();
+  if(!store||!num){alert('Моля, въведете магазин и номер на ППР.');return;}
+  google.script.run.withSuccessHandler(rows=>{
+    const tbody=document.querySelector('#checkPprTable tbody');
+    tbody.innerHTML='';
+    if(!rows||!rows.length){alert('Не е намерен ППР.');return;}
+    rows.forEach(r=>{
+      const [code,name,qty]=r;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${code}</td><td>${name}</td><td contenteditable="true">${qty}</td>`;
+      tbody.appendChild(tr);
+    });
+  }).withFailureHandler(err=>alert('⚠️ '+err.message))
+    .getPprData(store,num);
+}
+
+function submitPprEdits(){
+  const store=document.getElementById('checkPprStore').value.trim();
+  const num=document.getElementById('checkPprNumber').value.trim();
+  const rows=Array.from(document.querySelectorAll('#checkPprTable tbody tr')).map(r=>[
+    r.cells[0].textContent.trim(),
+    r.cells[1].textContent.trim(),
+    r.cells[2].textContent.trim()
+  ]);
+  google.script.run.withSuccessHandler(msg=>{
+    alert(msg);
+    closeCheckPprModal();
+  }).withFailureHandler(err=>alert('⚠️ '+err.message))
+    .updatePprData(store,num,rows);
 }
 
 

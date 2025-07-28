@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h3>Изберете режим</h3>
+  <button onclick="openMenu()">Меню</button>
+  <button onclick="openLabels()">Етикети</button>
+
+  <script>
+    function openMenu() {
+      google.script.run.showMenuSidebar();
+      google.script.host.close(); // Затваря този sidebar
+    }
+    function openLabels() {
+      google.script.run.showLabelsSidebar();
+      google.script.host.close();
+    }
+  </script>
+</body>
+</html>
+
+

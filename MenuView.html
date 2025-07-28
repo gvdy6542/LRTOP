@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Меню</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      background: #f6f8fa;
+    }
+    #menuList div {
+      padding: 5px 0;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h3>Меню</h3>
+  <button onclick="loadMenu()">Зареди менюто</button>
+  <div id="menuList" style="margin-top: 10px;">Натиснете бутона</div>
+
+  <script>
+    function loadMenu() {
+      google.script.run.withSuccessHandler(items => {
+        const container = document.getElementById('menuList');
+        if (!items || items.length === 0) {
+          container.innerHTML = '<em>Няма елементи в листа "Меню"</em>';
+          return;
+        }
+        container.innerHTML = '';
+        items.forEach(item => {
+          const div = document.createElement('div');
+          div.textContent = `${item.name} - ${item.price} лв.`;
+          container.appendChild(div);
+        });
+      }).fetchMenuData();
+    }
+  </script>
+</body>
+</html>

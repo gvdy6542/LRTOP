@@ -1,4 +1,5 @@
-const MAIN_SS_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени 
+const MAIN_SS_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени
+const EUR_RATE   = 1.95583;                                           // курс евро
 
 var processedFilesList = [];
 
@@ -12,6 +13,10 @@ function loadReferencePage() {
 
 function loadinterfacePage() {
   return HtmlService.createHtmlOutputFromFile('interface.html').getContent();
+}
+
+function loadLabelsPage() {
+  return HtmlService.createHtmlOutputFromFile('labels.html').getContent();
 }
 
 function processBarcode(barcode) {
@@ -1335,7 +1340,8 @@ function buildPPRCacheToSheet() {
       const normalizedDate = Utilities.formatDate(fileDate, tz, 'yyyy-MM-dd');
       const ss = SpreadsheetApp.openById(file.getId());
       const meta = ss.getSheetByName('МЕТА');
-      if (!meta || meta.getRange('A1').getValue() !== 'Брак') continue;
+      if (!meta) continue;
+      const reasonType = meta.getRange('A1').getValue();
 
       const sheets = ss.getSheets();
       for (const sheet of sheets) {
@@ -1361,7 +1367,8 @@ function buildPPRCacheToSheet() {
             parseFloat(qty).toFixed(3),
             unitPrice.toFixed(2),
             total.toFixed(2),
-            file.getName() // новата колона: Име на файла
+            file.getName(),
+            reasonType
           ]);
 
           existingKeys.add(key);
@@ -1372,3 +1379,364 @@ function buildPPRCacheToSheet() {
 
   SpreadsheetApp.flush();
 }
+
+function getPprData(storeNumber, pprNumber) {
+  const PPR_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
+
+  const mainFolder = DriveApp.getFolderById(PPR_FOLDER_ID);
+  const storeFolders = mainFolder.getFoldersByName(storeNumber);
+  if (!storeFolders.hasNext()) throw new Error('Няма папка за магазина.');
+
+  const files = storeFolders.next().getFiles();
+  let targetFile = null;
+  while (files.hasNext()) {
+    const f = files.next();
+    const name = f.getName();
+    if (name.startsWith(pprNumber + '_') && name.endsWith('_' + storeNumber)) {
+      targetFile = f;
+      break;
+    }
+  }
+  if (!targetFile) throw new Error('ППР файлът не е намерен.');
+
+  const ss = SpreadsheetApp.openById(targetFile.getId());
+  const rows = [];
+  TARGET_SHEETS.forEach(sh => {
+    const sheet = ss.getSheetByName(sh);
+    if (!sheet) return;
+    const data = sheet.getRange(2,1,sheet.getLastRow()-1,4).getValues();
+    data.forEach(([code,name,,qty]) => {
+      if (code && qty) rows.push([code,name,qty]);
+    });
+  });
+  return rows;
+}
+
+function updatePprData(storeNumber, pprNumber, tableData) {
+  const PPR_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
+
+  const mainFolder = DriveApp.getFolderById(PPR_FOLDER_ID);
+  const storeFolders = mainFolder.getFoldersByName(storeNumber);
+  if (!storeFolders.hasNext()) throw new Error('Няма папка за магазина.');
+
+  const files = storeFolders.next().getFiles();
+  let targetFile = null;
+  while (files.hasNext()) {
+    const f = files.next();
+    const name = f.getName();
+    if (name.startsWith(pprNumber + '_') && name.endsWith('_' + storeNumber)) {
+      targetFile = f;
+      break;
+    }
+  }
+  if (!targetFile) throw new Error('ППР файлът не е намерен.');
+
+  const ss = SpreadsheetApp.openById(targetFile.getId());
+
+  tableData.forEach(row => {
+    const code = row[0];
+    const qty = parseFloat(row[2]);
+    if (!code || isNaN(qty)) return;
+    for (const sh of TARGET_SHEETS) {
+      const sheet = ss.getSheetByName(sh);
+      if (!sheet) continue;
+      const vals = sheet.getRange('A:A').getValues();
+      for (let i=0; i<vals.length; i++) {
+        if (String(vals[i][0]).trim() === String(code)) {
+          sheet.getRange(i+1,4).setValue(qty);
+          return;
+        }
+      }
+    }
+  });
+
+  SpreadsheetApp.flush();
+  return 'ППР е актуализиран.';
+}
+
+/**
+ * Връща справка за брака за даден магазин от началото на
+ * текущия месец до днес. Данните се четат от лист "история на брака".
+ * @param {string} storeNumber
+ * @return {{rows: any[][], total: string}}
+ */
+function getWasteReport(storeNumber) {
+  const CACHE_SHEET_ID   = '1HCESdWuLCwUv5b-nB9HCqpWH5HniCK3zpqzMgDgSAgo';
+  const CACHE_SHEET_NAME = 'история на брака';
+
+  const now   = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const tz    = Session.getScriptTimeZone();
+
+  const sheet = SpreadsheetApp.openById(CACHE_SHEET_ID)
+                                 .getSheetByName(CACHE_SHEET_NAME);
+  if (!sheet) return { rows: [], total: '0.00' };
+
+  const data  = sheet.getDataRange().getValues();
+  const rows  = [];
+  let total   = 0;
+
+  data.forEach(r => {
+    const [date, store, , name, qty, , sum, , type = 'Брак'] = r;
+    if (!date || String(store).trim() !== storeNumber) return;
+    if (type && type !== 'Брак') return;
+    const d = new Date(date);
+    if (d < start || d > now) return;
+
+    const q = parseFloat(qty) || 0;
+    const s = parseFloat(sum) || 0;
+    rows.push([
+      Utilities.formatDate(d, tz, 'dd.MM.yyyy'),
+      name,
+      q.toFixed(3),
+      s.toFixed(2)
+    ]);
+    total += s;
+  });
+
+  return { rows, total: total.toFixed(2) };
+}
+
+/* ==================== Label Generator ==================== */
+
+function fetchProductByBarcode(barcode) {
+  const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
+  if (!sheet) return null;
+
+  const rows = sheet.getRange('A:F').getValues();
+  for (const r of rows) {
+    if (String(r[2]) === String(barcode)) {
+      const rawPrice = String(r[5])
+        .replace(/[^0-9.,]/g, '')
+        .replace(',', '.')
+        .trim();
+      const price = parseFloat(rawPrice);
+      return {
+        code: r[0],
+        name: r[1],
+        barcode: r[2],
+        price: isNaN(price) ? null : price
+      };
+    }
+  }
+  return null;
+}
+
+function fetchPreviewData(barcodes) {
+  if (!Array.isArray(barcodes)) return [];
+  return barcodes
+    .map(bc => fetchProductByBarcode(bc))
+    .filter(item => item);
+}
+
+function generateLabelsSheet(items) {
+  if (!Array.isArray(items) || !items.length) {
+    throw new Error('Липсват данни за етикети.');
+  }
+
+  const ss = SpreadsheetApp.create('Етикети');
+  const sh = ss.getActiveSheet();
+  sh.getRange(1, 1, 1, 5).setValues([
+    ['Код', 'Име', 'Баркод', 'Цена (лв)', 'Цена (€)']
+  ]);
+
+  const data = items.map(it => [
+    it.code,
+    it.name,
+    it.barcode,
+    it.price ? it.price.toFixed(2) : '',
+    it.price ? (it.price / EUR_RATE).toFixed(2) : ''
+  ]);
+
+  sh.getRange(2, 1, data.length, 5).setValues(data);
+  return ss.getUrl();
+}
+
+function runGenerateLabels(barcodes) {
+  const items = fetchPreviewData(barcodes);
+  if (!items.length) {
+    throw new Error('Няма намерени продукти.');
+  }
+  return generateLabelsSheet(items);
+}
+
+// Показва прозореца за избор (Selection.html)
+function showSelectionSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('Selection')
+    .setTitle('Избор режим');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Показва твоя вече съществуващ генератор (Index.html)
+function showLabelsSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('ЛР');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Показва менюто (MenuView.html)
+function showMenuSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('MenuView')
+    .setTitle('Меню');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Останалите функции от твоя код (runGenerateLabels, fetchPreviewData, generateLabelsSheet, fetchMenuData)
+// ... не ги пипай, те си работят.
+
+
+
+// Стартира Web App
+function doGet() {
+  return HtmlService
+    .createTemplateFromFile('Index')
+    .evaluate()
+    .setTitle('ЛР');
+}
+
+// Показва Sidebar
+function showSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('ЛР');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Извиква генерация на листа и връща данни за preview
+function runGenerateLabels() {
+  generateLabelsSheet();
+  return fetchPreviewData();
+}
+
+// Чете Sheet1 и подготвя данни за preview
+function fetchPreviewData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('цени');
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+  for (var i = 1; i < data.length; i++) {
+    var code = data[i][0], name = data[i][1], raw = data[i][2];
+    if (!code || !name) continue;
+    var price = parseFloat(String(raw).replace(',', '.'));
+    if (isNaN(price)) continue;
+    var euro = Math.floor((price / 1.95583) * 100) / 100;
+    var barcodeUrl = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
+    result.push({
+      name: name,
+   price: '<div class="price-line">' + price.toFixed(2) + ' лв.</div>' +
+       '<div class="price-line">' + euro.toFixed(2) + ' €</div>',
+
+
+      barcodeUrl: barcodeUrl
+    });
+  }
+  return result;
+}
+
+// Генерира лист "Етикети" с формули IMAGE за баркод
+function generateLabelsSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var src = ss.getSheetByName('цени');
+  var dst = ss.getSheetByName('Етикети') || ss.insertSheet('Етикети');
+  dst.clear();
+  var cmToPx = function(cm) { return Math.round(cm * 37.8); };
+  var w = cmToPx(6.5), h = cmToPx(4.5);
+  for (var c = 1; c <= 4; c++) dst.setColumnWidth(c, w);
+  for (var r = 1; r <= 50; r++) dst.setRowHeight(r, h);
+  var rows = src.getDataRange().getValues(), r = 1, c = 1;
+  for (var i = 1; i < rows.length; i++) {
+    var code = rows[i][0], name = rows[i][1], raw = rows[i][2];
+    var price = parseFloat(String(raw).replace(',', '.'));
+    if (!code || !name || isNaN(price)) continue;
+    var euro = Math.floor((price / 1.95583) * 100) / 100;
+    dst.getRange(r, c).setWrap(true).setFontSize(12)
+       .setValue(name + String.fromCharCode(10) + price.toFixed(2) + ' лв.   ' + euro.toFixed(2) + ' €');
+    var url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
+    dst.getRange(r+1, c).setFormula('=IMAGE("' + url + '",4,' + h + ',' + cmToPx(0.5) + ')');
+    c++; if (c>4) { c=1; r+=2; }
+  }
+}
+
+
+
+// Добавя меню в Google Sheets UI при отваряне
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Етикети')
+    .addItem('Избор режим', 'showSelectionSidebar')
+    .addToUi();
+}
+
+// Показва прозореца за избор (Selection.html)
+function showSelectionSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('Selection')
+    .setTitle('Избор');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Показва твоя вече съществуващ генератор (Index.html)
+function showLabelsSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('ЛР');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Показва менюто (MenuView.html)
+function showMenuSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('MenuView')
+    .setTitle('Меню');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+// Взима данни от лист "Меню"
+function fetchMenuData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Меню');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+  for (var i = 1; i < data.length; i++) { // Прескачаме заглавния ред
+    var name = data[i][0];
+    var priceRaw = data[i][1];
+    if (!name) continue;
+    var price = parseFloat(String(priceRaw).replace(',', '.'));
+    if (isNaN(price)) continue;
+    result.push({
+      name: name,
+      price: price.toFixed(2)
+    });
+  }
+  return result;
+}
+function showMenuSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('MenuView')
+    .setTitle('Меню');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+function showLabelsSidebar() {
+  var html = HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('ЛР');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+function fetchProductByBarcode(barcode) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('база данни');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim() == barcode) {
+      var name = data[i][0];
+      var rawPrice = data[i][2];
+      var price = parseFloat(String(rawPrice).replace(',', '.'));
+      if (isNaN(price)) return null;
+      return {
+        name: name,
+        code: barcode,
+        price: price
+      };
+    }
+  }
+  return null;
+}
+

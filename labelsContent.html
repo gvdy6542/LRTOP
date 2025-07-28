@@ -1,0 +1,231 @@
+<div class="controls" style="padding:10px; background:#fff; display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-family: Arial, sans-serif;">
+  <button id="btn" onclick="generate()">Стартирай</button>
+  <button id="btnPrint" onclick="window.print()" disabled>Печат</button>
+  <label>Фирма:<input type="text" id="companyField" placeholder="Фирма"></label>
+  <label>Име:<input type="text" id="customName" placeholder="Име"></label>
+  <label>Размер име (px):<input type="number" id="nameSize" value="18" min="8" max="36"></label>
+  <label>Шрифт име:<select id="nameFont">
+    <option>Arial, sans-serif</option>
+    <option>Tahoma, sans-serif</option>
+    <option>"Segoe UI", Tahoma, sans-serif</option>
+    <option>"Times New Roman", serif</option>
+  </select></label>
+  <label>Цвят текст:<input type="color" id="textColor" value="#333333"></label>
+  <label>Цена:<input type="number" id="customPrice" placeholder="Цена" step="0.01"></label>
+  <label>Размер цена (px):<input type="number" id="priceSize" value="16" min="8" max="32"></label>
+  <label>Шрифт цена:<select id="priceFont">
+    <option>Arial, sans-serif</option>
+    <option>Tahoma, sans-serif</option>
+    <option>"Segoe UI", Tahoma, sans-serif</option>
+    <option>"Times New Roman", serif</option>
+  </select></label>
+  <label>Цвят цена:<input type="color" id="priceColor" value="#333333"></label>
+  <label>Код:<input type="text" id="customCode" placeholder="Код"></label>
+  <label>Размер етикет:<select id="labelSizePicker">
+    <option value="6.5cm,4.5cm">Стандартен</option>
+    <option value="8cm,5cm">Голям</option>
+    <option value="5cm,3.5cm">Малък</option>
+  </select></label>
+  <button id="addBtn" onclick="addCustom()">Добави етикет</button>
+</div>
+
+<div id="preview" style="padding:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(var(--label-width, 6.5cm), 1fr)); grid-auto-rows: var(--label-height, 4.5cm); gap: 0.1cm; background: #f6f8fa;"></div>
+
+<style>
+  .card {
+    position: relative;
+    background: var(--card-bg, #FFEB3B);
+    border: 2px var(--card-border-style, solid) var(--card-border, #333);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    cursor: default;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.1);
+    border: none;
+    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .company {
+    font-size: var(--company-size, 14px);
+    font-family: var(--company-font, Arial, sans-serif);
+    font-weight: bold;
+    color: var(--text-color, #333);
+    margin: 4px 0;
+    text-align: center;
+  }
+  .name {
+    font-size: var(--name-size, 18px);
+    font-family: var(--name-font, Arial, sans-serif);
+    font-weight: bold;
+    color: var(--text-color, #333);
+    margin: 4px 0;
+    text-align: center;
+  }
+  .price {
+    font-size: var(--price-size, 16px);
+    font-family: var(--price-font, Arial, sans-serif);
+    font-weight: bold;
+    color: var(--price-color, #333);
+    margin: 4px 0;
+    text-align: center;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    display: inline-block;
+  }
+  .barcode {
+
+  }
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 0.5cm;
+    }
+    body, html {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .controls {
+      display: none;
+    }
+    #preview {
+      padding: 0;
+    }
+    .card {
+      box-shadow: none;
+      page-break-inside: avoid;
+    }
+    .delete-btn {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  let labels = [];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const controls = document.querySelectorAll('.controls input, .controls select');
+    controls.forEach(el => {
+      el.addEventListener('input', render);
+      el.addEventListener('change', render);
+    });
+  });
+
+  function generate() {
+    document.getElementById('btn').disabled = true;
+    google.script.run.withSuccessHandler(labs => {
+      labels = labs;
+      render();
+      document.getElementById('btn').disabled = false;
+    }).runGenerateLabels();
+  }
+
+  function addCustom() {
+    const code = document.getElementById('customCode').value.trim();
+    const name = document.getElementById('customName').value.trim();
+    const priceVal = document.getElementById('customPrice').value;
+    if (!code || !name || !priceVal) return;
+    const priceNum = parseFloat(priceVal);
+    const euro = Math.floor((priceNum / 1.95583) * 100) / 100;
+    const url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
+    labels.unshift({
+      name: name,
+      price: priceNum.toFixed(2) + ' лв.   ' + euro.toFixed(2) + ' €',
+      : url
+    });
+    ['customCode', 'customName', 'customPrice'].forEach(id => document.getElementById(id).value = '');
+    render();
+  }
+
+  function render() {
+    const preview = document.getElementById('preview');
+    preview.innerHTML = '';
+    const [w, h] = document.getElementById('labelSizePicker').value.split(',');
+    preview.style.setProperty('--label-width', w);
+    preview.style.setProperty('--label-height', h);
+
+    const bg = '#FFEB3B'; // фона - твърдо жълто (можеш да добавиш контрол)
+    const border = '#333'; // контур - черен (можеш да добавиш контрол)
+    const bStyle = 'solid'; // стил контур
+
+    const company = document.getElementById('companyField').value.trim();
+    const nSize = document.getElementById('nameSize').value + 'px';
+    const nFont = document.getElementById('nameFont').value;
+    const pSize = document.getElementById('priceSize').value + 'px';
+    const pFont = document.getElementById('priceFont').value;
+    const tColor = document.getElementById('textColor').value;
+    const pColor = document.getElementById('priceColor').value;
+
+    labels.forEach((l, idx) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      card.style.setProperty('--card-bg', bg);
+      card.style.setProperty('--card-border', border);
+      card.style.setProperty('--card-border-style', bStyle);
+      card.style.setProperty('--name-size', nSize);
+      card.style.setProperty('--name-font', nFont);
+      card.style.setProperty('--price-size', pSize);
+      card.style.setProperty('--price-font', pFont);
+      card.style.setProperty('--text-color', tColor);
+      card.style.setProperty('--price-color', pColor);
+
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.textContent = '×';
+      del.title = 'Изтрий етикета';
+      del.addEventListener('click', () => {
+        labels.splice(idx, 1);
+        render();
+      });
+      card.appendChild(del);
+
+      if (company) {
+        const c = document.createElement('p');
+        c.className = 'company';
+        c.textContent = company;
+        card.appendChild(c);
+      }
+
+      const n = document.createElement('p');
+      n.className = 'name';
+      n.textContent = l.name;
+      card.appendChild(n);
+
+      const p = document.createElement('p');
+      p.className = 'price';
+      p.textContent = l.price;
+      card.appendChild(p);
+
+    
+
+      preview.appendChild(card);
+    });
+
+    document.getElementById('btnPrint').disabled = labels.length === 0;
+  }
+</script>
