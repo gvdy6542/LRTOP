@@ -19,6 +19,27 @@ function loadLabelsPage() {
   return HtmlService.createHtmlOutputFromFile('labels.html').getContent();
 }
 
+function getConfig() {
+  const props = PropertiesService.getScriptProperties();
+  const data = props.getProperty("config");
+  return data ? JSON.parse(data) : {};
+}
+
+function saveConfig(config) {
+  PropertiesService.getScriptProperties().setProperty("config", JSON.stringify(config));
+}
+
+function openAdminPanel() {
+  return HtmlService.createHtmlOutputFromFile("admin.html").getContent();
+}
+
+function isAdminUser() {
+  const conf = getConfig();
+  const email = Session.getActiveUser().getEmail();
+  const list = (conf.adminEmails || "").split(/,\s*/).filter(String);
+  return list.includes(email);
+}
+
 function processBarcode(barcode) {
   let itemDetails = findItemDetailsByBarcode(barcode);      // старото търсене
   if (!itemDetails) itemDetails = findItemDetailsByBarcode_MAIN(barcode); // ← fallback
