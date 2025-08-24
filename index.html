@@ -480,7 +480,7 @@
       <input type="text" id="name1" placeholder="Име Фамилия" style="width:10cm;">
       <input type="text" id="name2" placeholder="Име Фамилия" style="width:10cm;">
     </div>
-    <button class="green-button" onclick="startRevision()">Започни ревизия</button>
+    <button id="startRevisionBtn" class="green-button" onclick="startRevision()">Започни ревизия</button>
 
     <input type="text"
            id="barcodeInput"
@@ -827,7 +827,7 @@ document.addEventListener('click', e => {
       sendActivity('start_revision');
       document.getElementById('nameFields').style.display = 'none';
       document.getElementById('barcodeInput').style.display = 'block';
-      document.querySelector('.green-button').style.display = 'none';
+      document.getElementById('startRevisionBtn').style.display = 'none';
       document.getElementById('barcodeInput').focus();
     }
 
