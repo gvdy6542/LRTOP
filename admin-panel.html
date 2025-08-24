@@ -1,202 +1,63 @@
 <!DOCTYPE html>
-<html lang="bg">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Админ панел</title>
+  <base target="_top">
   <style>
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  margin: 0;
-  padding: 0;
-}
-
-.login-container {
-  margin-top: 100px;
-}
-
-.login-container input {
-  display: block;
-  width: 200px;
-  margin: 5px auto;
-  padding: 8px;
-}
-
-.login-container button {
-  padding: 8px 16px;
-}
-
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
-}
-
-.modal-content {
-  background-color: #fff;
-  margin: 10% auto;
-  padding: 20px;
-  max-width: 400px;
-  position: relative;
-}
-
-.close {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  font-size: 24px;
-  cursor: pointer;
-}
-
-.button-box {
-  margin: 10px;
-  text-align: left;
-}
-
-.button-box button {
-  margin-right: 5px;
-  margin-bottom: 5px;
-}
-
-.add-btn-form {
-  margin-top: 20px;
-}
-
-.hidden {
-  display: none;
-}
-
-.error-msg {
-  color: red;
-  margin-top: 10px;
-}
+    body{font-family:Arial, sans-serif;margin:20px;}
+    label{display:block;margin-bottom:6px;}
+    input[type="text"]{width:100%;max-width:400px;}
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <h2>Вход</h2>
-    <input type="text" id="username" placeholder="Потребител" />
-    <input type="password" id="password" placeholder="Парола" />
-    <button id="loginBtn">Влез</button>
-    <div id="loginError" class="error-msg"></div>
-  </div>
-
-  <div id="adminModal" class="modal">
-    <div class="modal-content">
-      <span id="closeModal" class="close">&times;</span>
-      <h2>Админ панел</h2>
-      <div id="buttonsArea"></div>
-      <div class="add-btn-form">
-        <input type="text" id="newBtnText" placeholder="Текст на бутона" />
-        <button id="addBtn">Добави бутон</button>
-      </div>
-    </div>
-  </div>
-
+  <h2>Админ конфигурация</h2>
+  <label>Parent Folder ID:
+    <input type="text" id="parentFolderId">
+  </label>
+  <label>Revision Folder ID:
+    <input type="text" id="revisionParentFolderId">
+  </label>
+  <label>PPR Folder ID:
+    <input type="text" id="pprFolderId">
+  </label>
+  <h3>Бутони</h3>
+  <label><input type="checkbox" id="showInterfaceButton"> Показвай "Обработка"</label>
+  <label><input type="checkbox" id="showReferenceButton"> Показвай "ИНВЕНТАРИЗАЦИЯ"</label>
+  <label><input type="checkbox" id="showLabelsButton"> Показвай "Етикети"</label>
+  <label><input type="checkbox" id="showPprButtons"> Показвай бутоните за ППР</label>
+  <label><input type="checkbox" id="showViewRevisionsBtn"> Показвай "Преглед на ревизии"</label>
+  <button onclick="saveConfig()">Запази</button>
   <script>
-const loginBtn = document.getElementById('loginBtn');
-const loginError = document.getElementById('loginError');
-const loginContainer = document.querySelector('.login-container');
-const modal = document.getElementById('adminModal');
-const closeModal = document.getElementById('closeModal');
-const buttonsArea = document.getElementById('buttonsArea');
-const addBtn = document.getElementById('addBtn');
-const newBtnText = document.getElementById('newBtnText');
-
-loginBtn.addEventListener('click', () => {
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value.trim();
-  loginError.textContent = '';
-  google.script.run.withSuccessHandler(res => {
-    if (!res.success) {
-      loginError.textContent = res.message || 'Невалиден потребител или парола!';
-      return;
+    function loadConfig(){
+      google.script.run.withSuccessHandler(function(c){
+        document.getElementById('parentFolderId').value = c.parentFolderId;
+        document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId;
+        document.getElementById('pprFolderId').value = c.pprFolderId;
+        document.getElementById('showInterfaceButton').checked = c.showInterfaceButton;
+        document.getElementById('showReferenceButton').checked = c.showReferenceButton;
+        document.getElementById('showLabelsButton').checked = c.showLabelsButton;
+        document.getElementById('showPprButtons').checked = c.showPprButtons;
+        document.getElementById('showViewRevisionsBtn').checked = c.showViewRevisionsBtn;
+      }).getConfig();
     }
-    loginContainer.style.display = 'none';
-    modal.style.display = 'block';
-    loadSavedButtons();
-  }).login(username, password);
-});
-
-closeModal.addEventListener('click', () => {
-  modal.style.display = 'none';
-});
-
-window.addEventListener('click', (event) => {
-  if (event.target === modal) {
-    modal.style.display = 'none';
-  }
-});
-
-let adminButtons = [];
-
-function loadSavedButtons(){
-  google.script.run.withSuccessHandler(buttons => {
-    adminButtons = Array.isArray(buttons) ? buttons : [];
-    renderButtons();
-  }).getAdminButtons();
-}
-
-function renderButtons(){
-  buttonsArea.innerHTML = '';
-  adminButtons.forEach((btn, index) => {
-    const box = document.createElement('div');
-    box.className = 'button-box';
-
-    const button = document.createElement('button');
-    button.textContent = btn.label;
-    button.classList.toggle('hidden', !btn.visible);
-    box.appendChild(button);
-
-    const label = document.createElement('label');
-    label.style.marginLeft = '10px';
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = btn.visible;
-    checkbox.addEventListener('change', () => {
-      adminButtons[index].visible = checkbox.checked;
-      saveButtons();
-      renderButtons();
-    });
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(' Показвай'));
-
-    const removeBtn = document.createElement('button');
-    removeBtn.textContent = 'Изтрий';
-    removeBtn.style.marginLeft = '10px';
-    removeBtn.addEventListener('click', () => {
-      adminButtons.splice(index, 1);
-      saveButtons();
-      renderButtons();
-    });
-
-    box.appendChild(label);
-    box.appendChild(removeBtn);
-    buttonsArea.appendChild(box);
-  });
-}
-
-function saveButtons(){
-  google.script.run.saveAdminButtons(adminButtons);
-}
-
-addBtn.addEventListener('click', () => {
-  const text = newBtnText.value.trim();
-  if (text) {
-    adminButtons.push({ label: text, visible: true });
-    saveButtons();
-    renderButtons();
-    newBtnText.value = '';
-  } else {
-    alert('Въведете текст за бутона!');
-  }
-});
+    function saveConfig(){
+      var c = {
+        parentFolderId: document.getElementById('parentFolderId').value.trim(),
+        revisionParentFolderId: document.getElementById('revisionParentFolderId').value.trim(),
+        pprFolderId: document.getElementById('pprFolderId').value.trim(),
+        showInterfaceButton: document.getElementById('showInterfaceButton').checked,
+        showReferenceButton: document.getElementById('showReferenceButton').checked,
+        showLabelsButton: document.getElementById('showLabelsButton').checked,
+        showPprButtons: document.getElementById('showPprButtons').checked,
+        showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
+      };
+      google.script.run
+        .withSuccessHandler(() => {
+          if (window.refreshConfig) window.refreshConfig();
+          loadConfig();
+        })
+        .saveConfig(c);
+    }
+    document.addEventListener('DOMContentLoaded', loadConfig);
   </script>
 </body>
 </html>
