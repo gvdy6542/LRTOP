@@ -54,8 +54,10 @@
         showPprButtons: document.getElementById('showPprButtons').checked,
         showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
       };
-      google.script.run.saveConfig(c);
-      alert('Конфигурацията е запазена.');
+      google.script.run.withSuccessHandler(() => {
+        window.opener.refreshConfig();
+        google.script.host.close();
+      }).saveConfig(c);
     }
     document.addEventListener('DOMContentLoaded', loadConfig);
   </script>
