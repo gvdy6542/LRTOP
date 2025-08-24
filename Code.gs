@@ -95,6 +95,35 @@ function isAdminUser() {
   return list.includes(email);
 }
 
+/**
+ * Returns the stored admin panel button configuration. Each button object
+ * contains a label and visibility flag.
+ * @return {{label:string,visible:boolean}[]}
+ */
+function getAdminButtons() {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty('adminButtons');
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {}
+  }
+  return [
+    { label: 'Бутон 1', visible: true },
+    { label: 'Бутон 2', visible: true },
+    { label: 'Бутон 3', visible: true }
+  ];
+}
+
+/**
+ * Persists admin panel button configuration.
+ * @param {{label:string,visible:boolean}[]} buttons
+ */
+function saveAdminButtons(buttons) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('adminButtons', JSON.stringify(buttons || []));
+}
+
 function processBarcode(barcode) {
   let itemDetails = findItemDetailsByBarcode(barcode);      // старото търсене
   if (!itemDetails) itemDetails = findItemDetailsByBarcode_MAIN(barcode); // ← fallback

@@ -120,7 +120,7 @@ loginBtn.addEventListener('click', () => {
     }
     loginContainer.style.display = 'none';
     modal.style.display = 'block';
-    loadInitialButtons();
+    loadSavedButtons();
   }).login(username, password);
 });
 
@@ -134,50 +134,64 @@ window.addEventListener('click', (event) => {
   }
 });
 
-let buttonsInitialized = false;
-function loadInitialButtons() {
-  if (buttonsInitialized) return;
-  buttonsInitialized = true;
-  addAdminButton('Бутон 1');
-  addAdminButton('Бутон 2');
-  addAdminButton('Бутон 3');
+let adminButtons = [];
+
+function loadSavedButtons(){
+  google.script.run.withSuccessHandler(buttons => {
+    adminButtons = Array.isArray(buttons) ? buttons : [];
+    renderButtons();
+  }).getAdminButtons();
 }
 
-function addAdminButton(text) {
-  const box = document.createElement('div');
-  box.className = 'button-box';
+function renderButtons(){
+  buttonsArea.innerHTML = '';
+  adminButtons.forEach((btn, index) => {
+    const box = document.createElement('div');
+    box.className = 'button-box';
 
-  const btn = document.createElement('button');
-  btn.textContent = text;
-  box.appendChild(btn);
+    const button = document.createElement('button');
+    button.textContent = btn.label;
+    button.classList.toggle('hidden', !btn.visible);
+    box.appendChild(button);
 
-  const label = document.createElement('label');
-  label.style.marginLeft = '10px';
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.checked = true;
-  checkbox.addEventListener('change', () => {
-    btn.classList.toggle('hidden', !checkbox.checked);
+    const label = document.createElement('label');
+    label.style.marginLeft = '10px';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = btn.visible;
+    checkbox.addEventListener('change', () => {
+      adminButtons[index].visible = checkbox.checked;
+      saveButtons();
+      renderButtons();
+    });
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(' Показвай'));
+
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = 'Изтрий';
+    removeBtn.style.marginLeft = '10px';
+    removeBtn.addEventListener('click', () => {
+      adminButtons.splice(index, 1);
+      saveButtons();
+      renderButtons();
+    });
+
+    box.appendChild(label);
+    box.appendChild(removeBtn);
+    buttonsArea.appendChild(box);
   });
-  label.appendChild(checkbox);
-  label.appendChild(document.createTextNode(' Показвай'));
+}
 
-  const removeBtn = document.createElement('button');
-  removeBtn.textContent = 'Изтрий';
-  removeBtn.style.marginLeft = '10px';
-  removeBtn.addEventListener('click', () => {
-    buttonsArea.removeChild(box);
-  });
-
-  box.appendChild(label);
-  box.appendChild(removeBtn);
-  buttonsArea.appendChild(box);
+function saveButtons(){
+  google.script.run.saveAdminButtons(adminButtons);
 }
 
 addBtn.addEventListener('click', () => {
   const text = newBtnText.value.trim();
   if (text) {
-    addAdminButton(text);
+    adminButtons.push({ label: text, visible: true });
+    saveButtons();
+    renderButtons();
     newBtnText.value = '';
   } else {
     alert('Въведете текст за бутона!');
