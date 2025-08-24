@@ -1,0 +1,12 @@
+{
+  "name": "lrtop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -e \"console.log('No tests specified')\""
+  },
+  "author": "",
+  "license": "ISC"
+}

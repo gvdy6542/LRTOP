@@ -1,18 +1,33 @@
 const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+const loginContainer = document.querySelector('.login-container');
 const modal = document.getElementById('adminModal');
 const closeModal = document.getElementById('closeModal');
 const buttonsArea = document.getElementById('buttonsArea');
 const addBtn = document.getElementById('addBtn');
 const newBtnText = document.getElementById('newBtnText');
 
-loginBtn.addEventListener('click', () => {
+loginBtn.addEventListener('click', async () => {
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value.trim();
-  if (username === 'admin' && password === 'admin') {
+  loginError.textContent = '';
+  try {
+    const response = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      loginError.textContent = data.message || 'Невалиден потребител или парола!';
+      return;
+    }
+    sessionStorage.setItem('authToken', data.token);
+    loginContainer.style.display = 'none';
     modal.style.display = 'block';
     loadInitialButtons();
-  } else {
-    alert('Невалиден потребител или парола!');
+  } catch (e) {
+    loginError.textContent = 'Възникна грешка. Опитайте отново.';
   }
 });
 
