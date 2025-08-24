@@ -45,7 +45,7 @@ function loadItemsCache() {
 /**
  * Взема артикул от кеша по код или баркод.
  * @param {string|number} codeOrBarcode
- * @return {{code:string,name:string,barcode?:string}|{name:string,barcode:string}|null}
+ * @return {{code:string,name:string,barcode?:string}|null}
  */
 function getItemFromCache(codeOrBarcode) {
   const cache = CacheService.getScriptCache();
@@ -67,10 +67,15 @@ function getItemFromCache(codeOrBarcode) {
   const data = raw ? JSON.parse(raw) : loadItemsCache();
   const key = String(codeOrBarcode).trim();
 
-  if (/^\d{1,6}$/.test(key)) {
-    return data.byCode[key] || null;
+  let item = data.byCode[key];
+  if (item) {
+    return { code: key, name: item.name, barcode: item.barcode };
   }
-  return data.byBarcode[key] || null;
+  item = data.byBarcode[key];
+  if (item) {
+    return { code: item.code, name: item.name, barcode: key };
+  }
+  return null;
 }
 
 // Конфигурация по подразбиране
