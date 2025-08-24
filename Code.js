@@ -1476,6 +1476,7 @@ function updatePprData(storeNumber, pprNumber, tableData) {
   SpreadsheetApp.flush();
   return 'ППР е актуализиран.';
 }
+<<<<<<< HEAD
 
 /**
  * Връща справка за брака за даден магазин от началото на
@@ -1761,3 +1762,5 @@ function fetchProductByBarcode(barcode) {
   return null;
 }
 
+=======
+>>>>>>> da9673f (Add PPR verification and editing)
