@@ -29,7 +29,8 @@ LRTOP е уеб приложение изградено с **Google Apps Script*
    clasp pull
    ```
 3. Правете промени по `.js` и `.html` файловете. За тестове може да използвате `clasp push` за качване към Apps Script.
-4. При нужда от автоматично деплойване използвайте GitHub Workflow файла в `.github/workflows/deploy.yml`.
+4. Изпълнете `npm test` за пускане на автоматичните unit тестове.
+5. При нужда от автоматично деплойване използвайте GitHub Workflow файла в `.github/workflows/deploy.yml`.
 
 ## Използване на уеб приложението
 
