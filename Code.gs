@@ -20,14 +20,7 @@ function loadItemsCache() {
 
   rows.forEach(r => {
     const code = String(r[0]).trim();
-    const name = String(r[2]).trim();
-    const barcode = String(r[6]).trim();
-    const shortCodes = String(r[7]).trim();
-    if (code) byCode[code] = { code, name, barcode };
-    if (barcode) byBarcode[barcode] = { code, name, barcode };
-    if (shortCodes) {
-      shortCodes.split(/[\s,]+/).filter(Boolean).forEach(sc => {
-        byShortCode[sc] = { code, name, barcode };
+
       });
     }
   });
@@ -76,15 +69,13 @@ function getItemFromCache(codeOrBarcode) {
 
   let item = data.byCode[key];
   if (item) {
-    return { code: key, name: item.name, barcode: item.barcode };
+    return { code: item.code, name: item.name, barcode: key };
   }
   item = data.byBarcode[key];
   if (item) {
     return { code: item.code, name: item.name, barcode: key };
   }
-  item = data.byShortCode[key];
-  if (item) {
-    return { code: item.code, name: item.name, barcode: item.barcode };
+
   }
   return null;
 }
