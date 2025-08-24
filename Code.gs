@@ -1730,3 +1730,19 @@ function fetchProductByBarcode(barcode) {
   }
   return null;
 }
+var USERS = {
+  admin: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
+};
+
+function login(username, password) {
+  var storedHash = USERS[username];
+  if (!storedHash) {
+    return { success: false, message: 'Invalid username or password' };
+  }
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password);
+  var hash = digest.map(function(b){ var v=(b < 0 ? b + 256 : b).toString(16); return v.length == 1 ? '0' + v : v; }).join('');
+  if (hash !== storedHash) {
+    return { success: false, message: 'Invalid username or password' };
+  }
+  return { success: true };
+}
