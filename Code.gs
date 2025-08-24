@@ -558,7 +558,6 @@ function findItemNameByCode(itemCode) {
   }
   return null;
 }
-
 // Намиране на артикулен номер по баркод
 function findItemNumberByBarcode(itemBarcode) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
@@ -1819,18 +1818,48 @@ function fetchProductByBarcode(barcode) {
   }
   return null;
 }
-var USERS = {
-  admin: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
-};
+
+function getUsers() {
+  var props = PropertiesService.getScriptProperties();
+  var stored = props.getProperty('USERS');
+  return stored ? JSON.parse(stored) : {};
+}
+
+function saveUsers(users) {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('USERS', JSON.stringify(users));
+}
+
+function hashPassword(password, salt) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + password);
+  return digest.map(function(b){
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length == 1 ? '0' + v : v;
+  }).join('');
+}
+
+function setUser(username, password) {
+  var users = getUsers();
+  var salt = Utilities.getUuid();
+  users[username] = {
+    salt: salt,
+    hash: hashPassword(password, salt)
+  };
+  saveUsers(users);
+}
+
+function getUser(username) {
+  var users = getUsers();
+  return users[username];
+}
 
 function login(username, password) {
-  var storedHash = USERS[username];
-  if (!storedHash) {
+  var user = getUser(username);
+  if (!user) {
     return { success: false, message: 'Invalid username or password' };
   }
-  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password);
-  var hash = digest.map(function(b){ var v=(b < 0 ? b + 256 : b).toString(16); return v.length == 1 ? '0' + v : v; }).join('');
-  if (hash !== storedHash) {
+  var hash = hashPassword(password, user.salt);
+  if (hash !== user.hash) {
     return { success: false, message: 'Invalid username or password' };
   }
   return { success: true };
