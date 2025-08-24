@@ -85,7 +85,7 @@ function saveConfig(config) {
 }
 
 function openAdminPanel() {
-  return HtmlService.createHtmlOutputFromFile("admin.html").getContent();
+  return HtmlService.createHtmlOutputFromFile("admin-panel.html").getContent();
 }
 
 function isAdminUser() {
