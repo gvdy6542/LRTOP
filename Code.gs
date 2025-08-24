@@ -26,8 +26,19 @@ function loadItemsCache() {
   });
 
   const data = { byCode: byCode, byBarcode: byBarcode };
-  CacheService.getScriptCache()
-              .put('itemsCache', JSON.stringify(data), 300); // ~5 минути
+
+  const cache = CacheService.getScriptCache();
+  const raw = JSON.stringify(data);
+  const LIMIT = 100 * 1024; // 100 KB
+  if (raw.length <= LIMIT) {
+    cache.put('itemsCache', raw, 300); // ~5 минути
+  } else {
+    const parts = Math.ceil(raw.length / LIMIT);
+    cache.put('itemsCache_parts', String(parts), 300);
+    for (let i = 0; i < parts; i++) {
+      cache.put('itemsCache_' + i, raw.slice(i * LIMIT, (i + 1) * LIMIT), 300);
+    }
+  }
   return data;
 }
 
@@ -39,6 +50,20 @@ function loadItemsCache() {
 function getItemFromCache(codeOrBarcode) {
   const cache = CacheService.getScriptCache();
   let raw = cache.get('itemsCache');
+  if (!raw) {
+    const partsStr = cache.get('itemsCache_parts');
+    if (partsStr) {
+      const parts = parseInt(partsStr, 10);
+      let chunks = [];
+      for (let i = 0; i < parts; i++) {
+        const chunk = cache.get('itemsCache_' + i);
+        if (chunk) chunks.push(chunk);
+      }
+      if (chunks.length === parts) {
+        raw = chunks.join('');
+      }
+    }
+  }
   const data = raw ? JSON.parse(raw) : loadItemsCache();
   const key = String(codeOrBarcode).trim();
 
