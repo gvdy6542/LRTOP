@@ -833,11 +833,20 @@ document.addEventListener('click', e => {
       localStorage.removeItem('revisionTimestamp');
       clearTable();
 
+      const name1El = document.getElementById('name1');
+      const name2El = document.getElementById('name2');
+      const storeEl = document.getElementById('store');
+      if (!name1El || !name2El || !storeEl) {
+        console.error('Required input missing');
+        btn.disabled = false;
+        return;
+      }
+
       const names = [
-        document.getElementById('name1').value.trim(),
-        document.getElementById('name2').value.trim()
+        name1El.value.trim(),
+        name2El.value.trim()
       ].filter(Boolean);
-      const store = document.getElementById('store').value.trim();
+      const store = storeEl.value.trim();
 
       google.script.run
         .withSuccessHandler(() => {
