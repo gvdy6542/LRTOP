@@ -251,3 +251,19 @@
     document.getElementById('btnPrint').disabled = labels.length === 0;
   }
 </script>
+<script>
+let lastRefreshTs = null;
+function pollRefresh(){
+  google.script.run.withSuccessHandler(function(ts){
+    if(lastRefreshTs && ts && ts !== lastRefreshTs){
+      if(window.refreshConfig) window.refreshConfig();
+      location.reload();
+    }
+    lastRefreshTs = ts;
+  }).getRefreshTimestamp();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  pollRefresh();
+  setInterval(pollRefresh, 60000);
+});
+</script>
