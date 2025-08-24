@@ -895,11 +895,11 @@ document.addEventListener('click', e => {
         const code = barcode.substring(0,7).replace(/^28/,'3');
         const qty  = parseInt(barcode.substring(7,12),10)/1000;
         google.script.run.withSuccessHandler(item => {
-          if (item) updateItemDetails(code,item.name,barcode,qty);
+          if (item) updateItemDetails(item.code,item.name,barcode,qty);
           else {
             const alt = '4'+code.substring(1);
             google.script.run.withSuccessHandler(item2 => {
-              if (item2) updateItemDetails(alt,item2.name,barcode,qty);
+              if (item2) updateItemDetails(item2.code,item2.name,barcode,qty);
               else document.getElementById('outputMessage').textContent = 'Не намерен!';
             }).getItemFromCache(alt);
           }
