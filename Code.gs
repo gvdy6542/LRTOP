@@ -68,7 +68,9 @@ function authorizeDrive() {
  */
 function listRevisions(storeName) {
   storeName = storeName.toLowerCase().trim();
-  const root = DriveApp.getFolderById('1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG');
+  const conf = getConfig();
+  const parentFolderId = conf.parentFolderId || '1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG';
+  const root = DriveApp.getFolderById(parentFolderId);
   const matches = [];
   collectFilesRecursively(root, storeName, matches);
   return matches.map(f=>({
@@ -129,6 +131,9 @@ function findItemDetailsByBarcode(itemBarcode) {
 
 }
 function saveToGoogleDrive(storeName, tableData) {
+  const conf = getConfig();
+  const parentFolderId = conf.parentFolderId || "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
+
   // Проверка дали всички редове имат еднакъв брой колони
   const columnCount = tableData[0].length;
   for (let i = 1; i < tableData.length; i++) {
@@ -145,7 +150,7 @@ function saveToGoogleDrive(storeName, tableData) {
   sheet.getRange(1, 1, tableData.length, columnCount).setValues(tableData);
 
   // Създаване на папка или използване на съществуваща в Google Drive
-const folder = DriveApp.getFolderById("1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG"); // Родителската папка
+const folder = DriveApp.getFolderById(parentFolderId); // Родителската папка
 
 // Проверка за съществуването на папка с дадено име
 let newFolder;
@@ -201,7 +206,9 @@ function copySheetAndCreateNew() {
   newSheet.getRange(1, 1, tableData.length, tableData[0].length).setValues(tableData);
 
   // 6. Създаване на папка в Google Drive, където да се съхранява файлът
-  const folder = DriveApp.getFolderById("1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG"); // ID на родителската папка
+  const conf = getConfig();
+  const parentFolderId = conf.parentFolderId || "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
+  const folder = DriveApp.getFolderById(parentFolderId); // ID на родителската папка
   const file = DriveApp.getFileById(copiedSpreadsheet.getId());
 
   // Преместваме новия файл в съществуващата папка
@@ -675,10 +682,10 @@ function findMissingValues() {
 }
 function processFilesWithProgress() {
   processedFilesList = [];
-
-  var parentFolderId = "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
+  const conf = getConfig();
+  var parentFolderId = conf.parentFolderId || "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
   var templateFileId = "11khFtYxY39OA9UYSfDStMPmGbbv76fBx-2-ziea7h50";
-  var revisionParentFolderId = "1Yo8oVkgYYmSR5z_cUFR7zdiRFJZkH3n5";
+  var revisionParentFolderId = conf.revisionParentFolderId || "1Yo8oVkgYYmSR5z_cUFR7zdiRFJZkH3n5";
   var today = new Date();
   var dateString = Utilities.formatDate(today, Session.getScriptTimeZone(), "yyyy-MM-dd");
   var revisionFolderName = "ревизия " + dateString;
@@ -755,8 +762,9 @@ function processFilesWithProgress() {
   return processedFilesList;
 }
 function uploadXlsxDataToFile(fileContent, targetFileName) {
+    const conf = getConfig();
     try {
-        var parentFolderId = "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
+        var parentFolderId = conf.parentFolderId || "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
         var parentFolder = DriveApp.getFolderById(parentFolderId);
         
         // Качваме файла в Drive
@@ -801,11 +809,11 @@ function uploadXlsxDataToFile(fileContent, targetFileName) {
 
 function processFilesWithProgress() {
   processedFilesList = [];
-  
+  const conf = getConfig();
   try {
-    var parentFolderId = "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
+    var parentFolderId = conf.parentFolderId || "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
     var templateFileId = "1vWgz8j2wWHrP2CYTRCnsiv970kbOfBfMzR0cP5ogodQ";
-    var revisionParentFolderId = "1Yo8oVkgYYmSR5z_cUFR7zdiRFJZkH3n5";
+    var revisionParentFolderId = conf.revisionParentFolderId || "1Yo8oVkgYYmSR5z_cUFR7zdiRFJZkH3n5";
     var today = new Date();
     var dateString = Utilities.formatDate(today, Session.getScriptTimeZone(), "yyyy-MM-dd");
     var revisionFolderName = "ревизия " + dateString;
@@ -890,8 +898,9 @@ function processFilesWithProgress() {
 }
 
 function uploadXlsxDataToFile(fileContent, targetFileName) {
+  const conf = getConfig();
   try {
-    var parentFolderId = "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
+    var parentFolderId = conf.parentFolderId || "1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG";
     var parentFolder = DriveApp.getFolderById(parentFolderId);
     
     // Качваме файла в Drive
@@ -935,8 +944,9 @@ function uploadXlsxDataToFile(fileContent, targetFileName) {
 function savePPRData(storeName, dateString, tableData, pprNumber, note, reasonType) {
   if (!pprNumber) throw new Error("❗ Моля, въведете номер на ППР.");
 
+  const conf = getConfig();
   const TEMPLATE_ID = '1KBeWbFlYDMXPoMxxz4H0YvfWLQh2ZdK4i_9iMGk9H4I';
-  const DESTINATION_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const DESTINATION_FOLDER_ID = conf.pprFolderId || '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
   const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА', 'МЛЯКО', 'АГНЕШКО', 'ГОВЕЖДО', 'МЛЕНИ', 'МЕСО', 'КОЛБАСИ'];
   const EMAIL = 'sklad.pld@dmc.farm,mesokombinat_dobrotica@abv.bg,kristiyan.stoynev@dmc.farm, order@dmc.farm';
 
@@ -1316,7 +1326,8 @@ function getPriceByCode(itemCode) {
 }
 
 function buildPPRCacheToSheet() {
-  const PPR_FOLDER_ID   = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const conf = getConfig();
+  const PPR_FOLDER_ID   = conf.pprFolderId || '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
   const PRICES_SHEET_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';
   const CACHE_SHEET_ID  = '1HCESdWuLCwUv5b-nB9HCqpWH5HniCK3zpqzMgDgSAgo';
   const CACHE_SHEET_NAME = 'история на брака';
@@ -1402,7 +1413,8 @@ function buildPPRCacheToSheet() {
 }
 
 function getPprData(storeNumber, pprNumber) {
-  const PPR_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const conf = getConfig();
+  const PPR_FOLDER_ID = conf.pprFolderId || '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
   const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
 
   const mainFolder = DriveApp.getFolderById(PPR_FOLDER_ID);
@@ -1435,7 +1447,8 @@ function getPprData(storeNumber, pprNumber) {
 }
 
 function updatePprData(storeNumber, pprNumber, tableData) {
-  const PPR_FOLDER_ID = '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
+  const conf = getConfig();
+  const PPR_FOLDER_ID = conf.pprFolderId || '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l';
   const TARGET_SHEETS = ['МЛЯКО ВЪНШНА СТОКА','МЛЯКО','АГНЕШКО','ГОВЕЖДО','МЛЕНИ','МЕСО','КОЛБАСИ'];
 
   const mainFolder = DriveApp.getFolderById(PPR_FOLDER_ID);
