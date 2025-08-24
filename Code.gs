@@ -21,8 +21,8 @@ function loadItemsCache() {
     const code = String(r[0]).trim();
     const name = String(r[1]).trim();
     const barcode = String(r[2]).trim();
-    if (code) byCode[code] = { name: name, barcode: barcode };
-    if (barcode) byBarcode[barcode] = { code: code, name: name };
+    if (code) byCode[code] = { code, name, barcode };
+    if (barcode) byBarcode[barcode] = { code, name, barcode };
   });
 
   const data = { byCode: byCode, byBarcode: byBarcode };
