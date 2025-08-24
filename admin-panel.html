@@ -77,15 +77,15 @@
 
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
-        const toBool = v => String(v).toLowerCase() === 'true';
+        const toBool = v => /^(true|1)$/i.test(String(v).trim());
         document.getElementById('parentFolderId').value = c.parentFolderId || '';
         document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId || '';
         document.getElementById('pprFolderId').value = c.pprFolderId || '';
-        document.getElementById('showInterfaceButton').checked = toBool(c.showInterfaceButton);
-        document.getElementById('showReferenceButton').checked = toBool(c.showReferenceButton);
-        document.getElementById('showLabelsButton').checked = toBool(c.showLabelsButton);
-        document.getElementById('showPprButtons').checked = toBool(c.showPprButtons);
-        document.getElementById('showViewRevisionsBtn').checked = toBool(c.showViewRevisionsBtn);
+        document.getElementById('showInterfaceButton').checked = !!toBool(c.showInterfaceButton);
+        document.getElementById('showReferenceButton').checked = !!toBool(c.showReferenceButton);
+        document.getElementById('showLabelsButton').checked = !!toBool(c.showLabelsButton);
+        document.getElementById('showPprButtons').checked = !!toBool(c.showPprButtons);
+        document.getElementById('showViewRevisionsBtn').checked = !!toBool(c.showViewRevisionsBtn);
         updateFolderLinks();
       }).getConfig();
     }
