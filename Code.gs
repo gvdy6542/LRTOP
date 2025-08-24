@@ -578,26 +578,37 @@ function handleWeightBarcode(barcode, sheet) {
   if (!barcode.startsWith("28")) return false;
 
   const itemCode = barcode.substring(0, 7).replace(/^28/, "3");
+  let itemCodeE = "4" + itemCode.substring(1);
   const grams = parseInt(barcode.substring(7, 12), 10);
   const quantity = grams / 1000;
-  const itemName = findItemNameByCode(itemCode) || findItemNameByCode("4" + itemCode.substring(1));
+
+  let itemName = findItemNameByCode(itemCode);
+  let codeToUse = itemCode;
+  if (!itemName) {
+    itemName = findItemNameByCode(itemCodeE);
+    if (itemName) {
+      codeToUse = itemCodeE;
+    }
+  }
 
   if (itemName) {
     populateSheet(sheet, {
       name: itemName,
-      code: itemCode,
+      code: codeToUse,
       b1Value: quantity,
       color: "#95fb77"
     });
-    transferToFoundSheet(itemCode, itemName, quantity);
-    transferToDescriptionSheet(itemCode, itemName, quantity);
+    transferToFoundSheet(codeToUse, itemName, quantity);
+    transferToDescriptionSheet(codeToUse, itemName, quantity);
     resetScanField(sheet);
+    return codeToUse;
   } else {
     SpreadsheetApp.getUi().alert("Артикулът с тегловен баркод не е намерен.");
     resetScanField(sheet);
   }
-  return true;
+  return false;
 }
+
 
 function handlePieceBarcode(barcode, sheet) {
   const item = getItemFromCache(barcode.substring(0, 13));
@@ -633,7 +644,8 @@ function onEdit(e) {
         return;
       }
       if (handleShortCode(scannedBarcode, sheet, cache)) return;
-      if (handleWeightBarcode(scannedBarcode, sheet)) return;
+      const weightCode = handleWeightBarcode(scannedBarcode, sheet);
+      if (weightCode) return;
       if (handlePieceBarcode(scannedBarcode, sheet)) return;
       SpreadsheetApp.getUi().alert("Артикулът с този баркод не е намерен.");
       resetScanField(sheet);
