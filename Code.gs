@@ -20,6 +20,11 @@ const DEFAULT_CONFIG = {
 function doGet() {
   // Инициализира конфигурацията при първо зареждане
   getConfig();
+
+  // генерира уникален идентификатор и записва активността
+  const clientId = Session.getTemporaryActiveUserKey();
+  logClientActivity(clientId);
+
   return HtmlService.createHtmlOutputFromFile('index');
 }
 
@@ -124,6 +129,44 @@ function getAdminButtons() {
 function saveAdminButtons(buttons) {
   const props = PropertiesService.getScriptProperties();
   props.setProperty('adminButtons', JSON.stringify(buttons || []));
+}
+
+// записва или обновява информация за клиент
+function logClientActivity(clientId) {
+  if (!clientId) return;
+  const ss = SpreadsheetApp.openById(CONFIG_SS_ID);
+  let sheet = ss.getSheetByName('Clients');
+  if (!sheet) {
+    sheet = ss.insertSheet('Clients');
+    sheet.getRange(1,1,1,3).setValues([["clientId","lastActive","count"]]);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === clientId) {
+      sheet.getRange(i+1,2,1,2).setValues([[new Date(), Number(data[i][2] || 0)+1]]);
+      return;
+    }
+  }
+  sheet.appendRow([clientId, new Date(), 1]);
+}
+
+// връща статистика за клиентите
+function getClientStats() {
+  const ss = SpreadsheetApp.openById(CONFIG_SS_ID);
+  const sheet = ss.getSheetByName('Clients');
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  const tz = Session.getScriptTimeZone();
+  const res = [];
+  for (let i = 1; i < data.length; i++) {
+    res.push({
+      clientId: data[i][0],
+      lastActive: Utilities.formatDate(new Date(data[i][1]), tz, 'yyyy-MM-dd HH:mm:ss'),
+      count: data[i][2]
+    });
+  }
+  return res;
 }
 
 function broadcastRefresh() {
