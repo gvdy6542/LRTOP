@@ -35,26 +35,53 @@ function loadLabelsPage() {
 }
 
 function getConfig() {
-  const props = PropertiesService.getScriptProperties();
-  let cfg = {};
-  try {
-    cfg = JSON.parse(props.getProperty('config') || '{}');
-  } catch (e) {}
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName('Config');
+  if (!sheet) {
+    sheet = ss.insertSheet('Config');
+    sheet.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]);
+  }
+  var cfg = {};
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var key = data[i][0];
+    var value = data[i][1];
+    if (key === '') continue;
+    cfg[key] = value;
+  }
+  var bool = function(val, def) {
+    return val === true || val === 'true' || val === 'TRUE' ? true : val === false || val === 'false' || val === 'FALSE' ? false : def;
+  };
   return {
     parentFolderId: cfg.parentFolderId || DEFAULT_CONFIG.parentFolderId,
     revisionParentFolderId: cfg.revisionParentFolderId || DEFAULT_CONFIG.revisionParentFolderId,
     pprFolderId: cfg.pprFolderId || DEFAULT_CONFIG.pprFolderId,
-    showInterfaceButton: typeof cfg.showInterfaceButton === 'boolean' ? cfg.showInterfaceButton : DEFAULT_CONFIG.showInterfaceButton,
-    showReferenceButton: typeof cfg.showReferenceButton === 'boolean' ? cfg.showReferenceButton : DEFAULT_CONFIG.showReferenceButton,
-    showLabelsButton: typeof cfg.showLabelsButton === 'boolean' ? cfg.showLabelsButton : DEFAULT_CONFIG.showLabelsButton,
-    showPprButtons: typeof cfg.showPprButtons === 'boolean' ? cfg.showPprButtons : DEFAULT_CONFIG.showPprButtons,
-    showViewRevisionsBtn: typeof cfg.showViewRevisionsBtn === 'boolean' ? cfg.showViewRevisionsBtn : DEFAULT_CONFIG.showViewRevisionsBtn,
+    showInterfaceButton: bool(cfg.showInterfaceButton, DEFAULT_CONFIG.showInterfaceButton),
+    showReferenceButton: bool(cfg.showReferenceButton, DEFAULT_CONFIG.showReferenceButton),
+    showLabelsButton: bool(cfg.showLabelsButton, DEFAULT_CONFIG.showLabelsButton),
+    showPprButtons: bool(cfg.showPprButtons, DEFAULT_CONFIG.showPprButtons),
+    showViewRevisionsBtn: bool(cfg.showViewRevisionsBtn, DEFAULT_CONFIG.showViewRevisionsBtn),
     adminEmails: cfg.adminEmails || DEFAULT_CONFIG.adminEmails
   };
 }
 
 function saveConfig(config) {
-  PropertiesService.getScriptProperties().setProperty("config", JSON.stringify(config));
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName('Config');
+  if (!sheet) {
+    sheet = ss.insertSheet('Config');
+  }
+  sheet.clear();
+  sheet.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]);
+  var rows = [];
+  for (var key in config) {
+    if (config.hasOwnProperty(key)) {
+      rows.push([key, config[key]]);
+    }
+  }
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+  }
 }
 
 function openAdminPanel() {
