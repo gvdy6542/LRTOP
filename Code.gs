@@ -499,6 +499,124 @@ function getTableData() {
 
 
 
+function populateSheet(sheet, {name, code, b1Value, color, nameFontSize = 40, b1FontSize = 25, b1Align = "center", activateB1 = false}) {
+  sheet.getRange("A1")
+       .setValue(name)
+       .setFontSize(nameFontSize)
+       .setFontWeight("bold")
+       .setHorizontalAlignment("center")
+       .setBackground(color);
+  sheet.getRange("B3").setValue(code);
+  sheet.getRange("B1")
+       .setValue(b1Value)
+       .setFontSize(b1FontSize)
+       .setHorizontalAlignment(b1Align)
+       .setBackground(color);
+  if (activateB1) {
+    sheet.getRange("B1").activate();
+  }
+}
+
+function handleSpecialCodes(code, sheet) {
+  switch (code) {
+    case "*0000":
+      clearFoundSheet();
+      SpreadsheetApp.getUi().alert("Страницата 'Намеренo' беше изчистена успешно.");
+      resetScanField(sheet);
+      return true;
+    case "*0001":
+      clearRevisionColumnC();
+      SpreadsheetApp.getUi().alert("Колона C на 'Ревизия' беше изчистена успешно.");
+      resetScanField(sheet);
+      return true;
+    case "*0002":
+      clearDescriptionSheet();
+      SpreadsheetApp.getUi().alert("Страницата 'Опис' беше изчистена успешно.");
+      resetScanField(sheet);
+      return true;
+    default:
+      return false;
+  }
+}
+
+function handleShortCode(code, sheet, cache) {
+  if (code.length !== 6) return false;
+
+  let itemName = cache.get(code);
+  if (!itemName) {
+    const listSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
+    const columnA = listSheet.getRange("A:A").getValues();
+    let rowIndex = -1;
+    for (let i = 0; i < columnA.length; i++) {
+      if (columnA[i][0] === code) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+    if (rowIndex !== -1) {
+      itemName = listSheet.getRange(rowIndex, 2).getValue();
+      cache.put(code, itemName, 1500);
+    }
+  }
+
+  if (itemName) {
+    populateSheet(sheet, {
+      name: itemName,
+      code: code,
+      b1Value: "Въведи количество тук:",
+      color: "#fcd4a9",
+      activateB1: true
+    });
+  } else {
+    SpreadsheetApp.getUi().alert("Артикулът с този баркод (6 символа) не е намерен.");
+    resetScanField(sheet);
+  }
+  return true;
+}
+
+function handleWeightBarcode(barcode, sheet) {
+  if (!barcode.startsWith("28")) return false;
+
+  const itemCode = barcode.substring(0, 7).replace(/^28/, "3");
+  const grams = parseInt(barcode.substring(7, 12), 10);
+  const quantity = grams / 1000;
+  const itemName = findItemNameByCode(itemCode) || findItemNameByCode("4" + itemCode.substring(1));
+
+  if (itemName) {
+    populateSheet(sheet, {
+      name: itemName,
+      code: itemCode,
+      b1Value: quantity,
+      color: "#95fb77"
+    });
+    transferToFoundSheet(itemCode, itemName, quantity);
+    transferToDescriptionSheet(itemCode, itemName, quantity);
+    resetScanField(sheet);
+  } else {
+    SpreadsheetApp.getUi().alert("Артикулът с тегловен баркод не е намерен.");
+    resetScanField(sheet);
+  }
+  return true;
+}
+
+function handlePieceBarcode(barcode, sheet) {
+  const item = getItemFromCache(barcode.substring(0, 13));
+  if (item) {
+    populateSheet(sheet, {
+      name: item.name,
+      code: item.code,
+      b1Value: "Въведи количество тук:",
+      color: "#aaa9fc",
+      nameFontSize: 28,
+      activateB1: true
+    });
+  } else {
+    SpreadsheetApp.getUi().alert("Артикулът с този баркод не е намерен.");
+    resetScanField(sheet);
+  }
+  return true;
+}
+
 function onEdit(e) {
   const sheet = e.source.getActiveSheet();  // Инициализация на sheet тук
   const range = e.range;
@@ -509,120 +627,16 @@ function onEdit(e) {
     // Обработка на сканиран баркод в клетка A2
     if (range.getA1Notation() === "A2") {
       const scannedBarcode = String(range.getValue()).trim();
-
-      // Вмъкване на допълнителна обработка в onEdit
-      if (scannedBarcode === "*0000") {
-        clearFoundSheet();
-        SpreadsheetApp.getUi().alert("Страницата 'Намеренo' беше изчистена успешно.");
-        resetScanField(sheet);
-        return;
-      }
-
-      if (scannedBarcode === "*0001") {
-        clearRevisionColumnC();
-        SpreadsheetApp.getUi().alert("Колона C на 'Ревизия' беше изчистена успешно.");
-        resetScanField(sheet);
-        return;
-      }
-
-      if (scannedBarcode === "*0002") {
-        clearDescriptionSheet();
-        SpreadsheetApp.getUi().alert("Страницата 'Опис' беше изчистена успешно.");
-        resetScanField(sheet);
-        return;
-      }
-
+      if (handleSpecialCodes(scannedBarcode, sheet)) return;
       if (!scannedBarcode) {
         resetScanField(sheet);
         return;
       }
-
-      let itemCode, itemName, isWeightBased = false;
-
-      // Обработка на баркодове с точно 6 символа
-      if (scannedBarcode.length === 6) {
-        itemCode = scannedBarcode;
-        const cachedData = cache.get(itemCode); // Търсене в кеша
-
-        if (cachedData) {
-          // Използване на кешираните данни
-          itemName = cachedData;
-          sheet.getRange("A1").setValue(itemName).setFontSize(40).setFontWeight("bold").setHorizontalAlignment("center").setBackground("#d9fa45");
-          sheet.getRange("B3").setValue(itemCode); // Показваме кода
-          sheet.getRange("B1").setValue("Въведи количество тук:").setFontSize(25).setBackground("#d9fa45");
-          sheet.getRange("B1").activate();
-          return;
-        }
-
-        // Търсене на артикула в "Лист1" по колона A
-        const sheetList1 = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
-        const columnA = sheetList1.getRange("A:A").getValues();
-        let rowIndex = -1;
-
-        for (let i = 0; i < columnA.length; i++) {
-          if (columnA[i][0] === itemCode) {
-            rowIndex = i + 1;
-            break;
-          }
-        }
-
-        if (rowIndex !== -1) {
-          itemName = sheetList1.getRange(rowIndex, 2).getValue();
-          sheet.getRange("A1").setValue(itemName).setFontSize(40).setFontWeight("bold").setHorizontalAlignment("center").setBackground("#fcd4a9");
-          sheet.getRange("B3").setValue(itemCode);
-          sheet.getRange("B1").setValue("Въведи количество тук:").setFontSize(25).setBackground("#fcd4a9");
-          sheet.getRange("B1").activate();
-
-          // Кеширане на резултата за бъдеща употреба
-          cache.put(itemCode, itemName, 1500); // Запазваме в кеша за 25 минути (1500 секунди)
-        } else {
-          SpreadsheetApp.getUi().alert("Артикулът с този баркод (6 символа) не е намерен.");
-          resetScanField(sheet);
-        }
-        return;
-      }
-
-      // Обработка на баркодовете започващи с "28" (тегловни артикули)
-      if (scannedBarcode.startsWith("28")) {
-        itemCodeE = scannedBarcode.substring(0, 7).replace(/^28/, "3");
-        const grams = parseInt(scannedBarcode.substring(7, 12), 10); // Извличаме тегло в грамове
-        const quantity = grams / 1000; // Преобразуваме в килограми
-        isWeightBased = true;
-
-        itemName = findItemNameByCode(itemCodeE) || findItemNameByCode("4" + itemCodeE.substring(1));
-
-        if (itemName) {
-          sheet.getRange("A1").setValue(itemName).setFontSize(40).setFontWeight("bold").setHorizontalAlignment("center").setBackground("#95fb77"); // Показваме името на артикула
-          sheet.getRange("B3").setValue(itemCodeE); // Записваме артикула в B3
-          sheet.getRange("B1").setValue(quantity).setFontSize(25).setHorizontalAlignment("center").setBackground("#95fb77"); // Записваме количеството в килограми в B1
-
-          // Прехвърляне на информацията в "Намеренo" и "Опис"
-          transferToFoundSheet(itemCodeE, itemName, quantity);
-          transferToDescriptionSheet(itemCodeE, itemName, quantity);
-
-          resetScanField(sheet);
-          return;
-        } else {
-          SpreadsheetApp.getUi().alert("Артикулът с тегловен баркод не е намерен.");
-          resetScanField(sheet);
-        }
-      }
-
-      // Обработка на бройкови артикули
-      const itemBarcode = scannedBarcode.substring(0, 13);
-      const item = getItemFromCache(itemBarcode);
-      const itemNumber = item ? item.code : null;
-      itemName = item ? item.name : null;
-
-      if (itemNumber) {
-        sheet.getRange("A1").setValue(itemName).setFontSize(28).setFontWeight("bold").setHorizontalAlignment("center").setBackground("#aaa9fc");
-        sheet.getRange("B3").setValue(itemNumber);
-        sheet.getRange("B1").setValue("Въведи количество тук:").setFontSize(25).setBackground("#aaa9fc");
-        sheet.getRange("B1").activate();
-      } else {
-        SpreadsheetApp.getUi().alert("Артикулът с този баркод не е намерен.");
-        resetScanField(sheet);
-      }
+      if (handleShortCode(scannedBarcode, sheet, cache)) return;
+      if (handleWeightBarcode(scannedBarcode, sheet)) return;
+      if (handlePieceBarcode(scannedBarcode, sheet)) return;
+      SpreadsheetApp.getUi().alert("Артикулът с този баркод не е намерен.");
+      resetScanField(sheet);
       return;
     }
 
