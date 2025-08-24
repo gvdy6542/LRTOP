@@ -496,12 +496,12 @@
       <button id="referenceButton" onclick="openReference()" style="display:none;">ИНВЕНТАРИЗАЦИЯ</button>
        <button id="viewRevisionsBtn"  class="green-button">Преглед на ревизии</button>  <!-- НОВ -->
        <!-- 1. Бутон за Въвеждане на ППР -->
-       <button class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
+       <button id="pprBtn" class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
        <!-- 2. Бутон за проверка/корекция на ППР -->
-        <button class="green-button" onclick="openCheckPprModal()">Проверка на ППР</button>
+        <button id="checkPprBtn" class="green-button" onclick="openCheckPprModal()">Проверка на ППР</button>
         <!-- Бутон за справка на брака -->
-        <button class="green-button" onclick="openWasteModal()">Справка на брака</button>
-        <button class="green-button" onclick="openLabels()">Етикети</button>
+        <button id="wasteBtn" class="green-button" onclick="openWasteModal()">Справка на брака</button>
+        <button id="labelsBtn" class="green-button" onclick="openLabels()">Етикети</button>
         <button id="adminBtn" class="green-button" onclick="openAdminPanel()" style="display:none;">Admin</button>
 
     </div>
@@ -1546,6 +1546,20 @@ function submitPprEdits(){
 }
 
 
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  google.script.run.withSuccessHandler(cfg => {
+    window.appConfig = cfg || {};
+    document.getElementById('interfaceButton').style.display = cfg.showInterfaceButton ? 'inline-block' : 'none';
+    document.getElementById('referenceButton').style.display = cfg.showReferenceButton ? 'inline-block' : 'none';
+    document.getElementById('viewRevisionsBtn').style.display = cfg.showViewRevisionsBtn ? 'inline-block' : 'none';
+    document.getElementById('pprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
+    document.getElementById('checkPprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
+    document.getElementById('wasteBtn').style.display = cfg.showWasteButton ? 'inline-block' : 'none';
+    document.getElementById('labelsBtn').style.display = cfg.showLabelsButton ? 'inline-block' : 'none';
+  }).getConfig();
+});
 </script>
 <script>
 document.getElementById('loginBtn').addEventListener('click', () => {
