@@ -1671,28 +1671,38 @@ function roundEuro(value) {
   return (final / 100).toFixed(2);
 }
 
+const ItemCache = (() => {
+  let cache = null;
+  return {
+    get(barcode) {
+      if (!cache) {
+        const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
+        if (!sheet) return null;
+        cache = {};
+        const rows = sheet.getRange('A:F').getValues();
+        rows.forEach(r => {
+          const bc = String(r[2]);
+          if (!bc) return;
+          const rawPrice = String(r[5])
+            .replace(/[^0-9.,]/g, '')
+            .replace(',', '.')
+            .trim();
+          const price = parseFloat(rawPrice);
+          cache[bc] = {
+            code: r[0],
+            name: r[1],
+            barcode: r[2],
+            price: isNaN(price) ? null : price
+          };
+        });
+      }
+      return cache[String(barcode)] || null;
+    }
+  };
+})();
 
 function fetchProductByBarcode(barcode) {
-  const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
-  if (!sheet) return null;
-
-  const rows = sheet.getRange('A:F').getValues();
-  for (const r of rows) {
-    if (String(r[2]) === String(barcode)) {
-      const rawPrice = String(r[5])
-        .replace(/[^0-9.,]/g, '')
-        .replace(',', '.')
-        .trim();
-      const price = parseFloat(rawPrice);
-      return {
-        code: r[0],
-        name: r[1],
-        barcode: r[2],
-        price: isNaN(price) ? null : price
-      };
-    }
-  }
-  return null;
+  return ItemCache.get(barcode);
 }
 
 function fetchPreviewData(barcodes) {
@@ -1763,60 +1773,6 @@ function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-// Извиква генерация на листа и връща данни за preview
-function runGenerateLabels() {
-  generateLabelsSheet();
-  return fetchPreviewData();
-}
-
-// Чете Sheet1 и подготвя данни за preview
-function fetchPreviewData() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('цени');
-  var data = sheet.getDataRange().getValues();
-  var result = [];
-  for (var i = 1; i < data.length; i++) {
-    var code = data[i][0], name = data[i][1], raw = data[i][2];
-    if (!code || !name) continue;
-    var price = parseFloat(String(raw).replace(',', '.'));
-    if (isNaN(price)) continue;
-    var euro = roundEuro(price / 1.95583);
-
-    var barcodeUrl = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
-    result.push({
-      name: name,
-      price: '<div class="price-line">' + price.toFixed(2) + ' лв.</div>' +
-             '<div class="price-line">' + euro + ' €</div>',
-      barcodeUrl: barcodeUrl
-    });
-  }
-  return result;
-}
-
-// Генерира лист "Етикети" с формули IMAGE за баркод
-function generateLabelsSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var src = ss.getSheetByName('цени');
-  var dst = ss.getSheetByName('Етикети') || ss.insertSheet('Етикети');
-  dst.clear();
-  var cmToPx = function(cm) { return Math.round(cm * 37.8); };
-  var w = cmToPx(6.5), h = cmToPx(4.5);
-  for (var c = 1; c <= 4; c++) dst.setColumnWidth(c, w);
-  for (var r = 1; r <= 50; r++) dst.setRowHeight(r, h);
-  var rows = src.getDataRange().getValues(), r = 1, c = 1;
-  for (var i = 1; i < rows.length; i++) {
-    var code = rows[i][0], name = rows[i][1], raw = rows[i][2];
-    var price = parseFloat(String(raw).replace(',', '.'));
-    if (!code || !name || isNaN(price)) continue;
-    var euro = roundEuro(price / 1.95583);
-
-    dst.getRange(r, c).setWrap(true).setFontSize(12)
-       .setValue(name + String.fromCharCode(10) + price.toFixed(2) + ' лв.   ' + euro + ' €');
-    var url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
-    dst.getRange(r+1, c).setFormula('=IMAGE("' + url + '",4,' + h + ',' + cmToPx(0.5) + ')');
-    c++; if (c > 4) { c = 1; r += 2; }
-  }
-}
 
 // Добавя меню в Google Sheets UI при отваряне
 function onOpen() {
@@ -1845,25 +1801,6 @@ function fetchMenuData() {
     });
   }
   return result;
-}
-
-function fetchProductByBarcode(barcode) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('база данни');
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][1]).trim() == barcode) {
-      var name = data[i][0];
-      var rawPrice = data[i][2];
-      var price = parseFloat(String(rawPrice).replace(',', '.'));
-      if (isNaN(price)) return null;
-      return {
-        name: name,
-        code: barcode,
-        price: price
-      };
-    }
-  }
-  return null;
 }
 
 function getUsers() {
