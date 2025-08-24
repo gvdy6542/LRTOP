@@ -128,8 +128,14 @@
       ['parentFolderId','revisionParentFolderId','pprFolderId'].forEach(id=>{
         document.getElementById(id).addEventListener('input', updateFolderLinks);
       });
-      document.getElementById('btnSave').addEventListener('click', () => { saveConfig(); sendActivity('save_config'); });
-      document.getElementById('btnRefreshAll').addEventListener('click', () => { refreshAllClients(); sendActivity('refresh_clients'); });
+      document.getElementById('btnSave').addEventListener('click', () => {
+        saveConfig();
+        sendActivity('save_config');
+      });
+      document.getElementById('btnRefreshAll').addEventListener('click', () => {
+        refreshAllClients();
+        sendActivity('refresh_clients');
+      });
 
       loadConfig();
       updateFolderLinks();
