@@ -271,11 +271,21 @@ function getRefreshTimestamp() {
 }
 
 function processBarcode(barcode) {
-  let itemDetails = findItemDetailsByBarcode(barcode);      // старото търсене
-  if (!itemDetails) itemDetails = findItemDetailsByBarcode_MAIN(barcode); // ← fallback
-
-  if (!itemDetails) return { error: 'Артикулът с този баркод не е намерен.' };
-  return itemDetails;
+  const candidates = [barcode];
+  if (barcode.startsWith('28')) {
+    const base = barcode.substring(0, 7).replace(/^28/, '3');
+    candidates.push(base);
+    candidates.push('4' + base.substring(1));
+  } else if (barcode.startsWith('8') && barcode.length >= 6) {
+    const core = barcode.substring(1, 6);
+    candidates.push('3' + core);
+    candidates.push('4' + core);
+  }
+  for (const code of candidates) {
+    const item = lookupItem(code);
+    if (item) return item;
+  }
+  return { error: 'Артикулът с този баркод не е намерен.' };
 }
 /**
  * Принуждава Apps Script да поиска Drive OAuth права.
