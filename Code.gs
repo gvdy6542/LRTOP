@@ -85,7 +85,7 @@ function getItemFromCache(codeOrBarcode) {
   if (item) {
     return { code: item.code, name: item.name, barcode: key };
   }
-  item = data.byShortCode ? data.byShortCode[key] : null;
+
   if (item) {
     return { code: item.code, name: item.name, barcode: key };
   }
