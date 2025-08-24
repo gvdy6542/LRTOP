@@ -81,21 +81,6 @@ function getItemFromCache(codeOrBarcode) {
 
   const item = data.byCode[key] || data.byBarcode[key] || data.byShortCode[key];
   return item ? { code: item.code, name: item.name, barcode: item.barcode } : null;
-
-  let item = data.byCode[key];
-  if (item) {
-    return { code: item.code, name: item.name, barcode: item.barcode };
-  }
-  item = data.byBarcode[key];
-  if (item) {
-    return { code: item.code, name: item.name, barcode: item.barcode };
-  }
-  item = data.byShortCode[key];
-  if (item) {
-    return { code: item.code, name: item.name, barcode: item.barcode };
-  }
-  return null;
-
 }
 
 // Конфигурация по подразбиране
