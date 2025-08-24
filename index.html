@@ -1399,24 +1399,35 @@ function handlePPRBarcode(e) {
   if (!barcode) return;
   e.target.value = '';
 
-  // 1) взимаме данните за артикула
-  google.script.run.withSuccessHandler(item => {
-    if (!item || !item.itemCode) return alert('Няма такъв баркод.');
+  let candidates = [];
+  if (barcode.startsWith('28')) {
+    const base = barcode.substring(0, 7).replace(/^28/, '3');
+    candidates = [base, '4' + base.substring(1)];
+  } else if (barcode.startsWith('8') && barcode.length >= 6) {
+    const core = barcode.substring(1, 6);
+    candidates = ['3' + core, '4' + core];
+  } else {
+    candidates = [barcode];
+  }
 
-    // 2) взимаме цената от GAS
-    google.script.run.withSuccessHandler(price => {
+  const tryLookup = (i) => {
+    if (i >= candidates.length) return alert('Няма такъв баркод.');
+    const code = candidates[i];
+    google.script.run.withSuccessHandler(item => {
+      if (item) {
+        google.script.run.withSuccessHandler(price => {
+          const qtyStr = prompt('Въведи количество за ' + item.name);
+          const qty    = parseFloat(qtyStr);
+          if (!qty || qty <= 0) return;
+          addToPPRTable(item.code, item.name, barcode, price, qty);
+        }).getPriceByCode(item.code);
+      } else {
+        tryLookup(i + 1);
+      }
+    }).lookupItem(code);
+  };
 
-      // 3) питаме за количество
-      const qtyStr = prompt('Въведи количество за ' + item.itemName);
-      const qty    = parseFloat(qtyStr);
-      if (!qty || qty <= 0) return;
-
-      // 4) добавяме реда
-      addToPPRTable(item.itemCode, item.itemName, item.itemBarcode, price, qty);
-
-    }).getPriceByCode(item.itemCode);
-
-  }).processBarcode(barcode);
+  tryLookup(0);
 }
 
 
