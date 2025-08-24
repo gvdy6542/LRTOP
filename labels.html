@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <base target="_top">
   <title>Генератор на етикети</title>
+  <script src="common.js"></script>
   <style>
     :root{
       --label-w: 65mm; /* по подразбиране */
@@ -540,6 +541,7 @@
 
   // ===== Старт =====
   document.addEventListener('DOMContentLoaded', () => {
+    sendActivity('labels_loaded');
     // зареди предишен размер
     try{
       const saved = JSON.parse(localStorage.getItem('LABEL_SIZE') || '{}');
@@ -638,6 +640,11 @@ function pollRefresh(){
 document.addEventListener('DOMContentLoaded', () => {
   pollRefresh();
   setInterval(pollRefresh, 60000);
+  document.addEventListener('click', e => {
+    if (e.target.tagName === 'BUTTON') {
+      sendActivity('button:' + (e.target.id || e.target.textContent.trim()));
+    }
+  });
 });
 </script>
 </body>

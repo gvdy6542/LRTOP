@@ -23,7 +23,7 @@ function doGet() {
 
   // генерира уникален идентификатор и записва активността
   const clientId = Session.getTemporaryActiveUserKey();
-  logClientActivity(clientId);
+  logClientActivity(clientId, 'load');
 
   return HtmlService.createHtmlOutputFromFile('index');
 }
@@ -132,23 +132,27 @@ function saveAdminButtons(buttons) {
 }
 
 // записва или обновява информация за клиент
-function logClientActivity(clientId) {
+function logClientActivity(clientId, activity) {
   if (!clientId) return;
   const ss = SpreadsheetApp.openById(CONFIG_SS_ID);
   let sheet = ss.getSheetByName('Clients');
   if (!sheet) {
     sheet = ss.insertSheet('Clients');
-    sheet.getRange(1,1,1,3).setValues([["clientId","lastActive","count"]]);
+    sheet.getRange(1,1,1,4).setValues([["clientId","lastActive","count","activity"]]);
   }
 
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === clientId) {
-      sheet.getRange(i+1,2,1,2).setValues([[new Date(), Number(data[i][2] || 0)+1]]);
+      sheet.getRange(i+1,2,1,3).setValues([[new Date(), Number(data[i][2] || 0)+1, activity]]);
       return;
     }
   }
-  sheet.appendRow([clientId, new Date(), 1]);
+  sheet.appendRow([clientId, new Date(), 1, activity]);
+}
+
+function getClientId() {
+  return Session.getTemporaryActiveUserKey();
 }
 
 // връща статистика за клиентите
@@ -163,7 +167,8 @@ function getClientStats() {
     res.push({
       clientId: data[i][0],
       lastActive: Utilities.formatDate(new Date(data[i][1]), tz, 'yyyy-MM-dd HH:mm:ss'),
-      count: data[i][2]
+      count: data[i][2],
+      activity: data[i][3]
     });
   }
   return res;

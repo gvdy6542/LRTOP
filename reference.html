@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Обработка на файлове</title>
+    <script src="common.js"></script>
     <style>
         button {
             font-size: 16px;
@@ -58,6 +59,7 @@
     </style>
     <script>
         function startProcessing() {
+            sendActivity('start_processing');
             document.getElementById("startButton").disabled = true;
             google.script.run.withSuccessHandler(updateTable).processFilesWithProgress();
         }
@@ -109,6 +111,7 @@
 
         function searchFiles() {
             var query = document.getElementById('searchQuery').value;
+            sendActivity('search_files');
             google.script.run.withSuccessHandler(updateMatchList).searchFiles(query);
         }
 
@@ -157,6 +160,7 @@
       document.addEventListener('DOMContentLoaded', () => {
         pollRefresh();
         setInterval(pollRefresh, 60000);
+        sendActivity('reference_loaded');
       });
     </script>
 </body>
