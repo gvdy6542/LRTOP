@@ -1701,8 +1701,31 @@ const ItemCache = (() => {
   };
 })();
 
+/**
+ * Looks up an item by barcode using the in-memory ItemCache.
+ * Returns a simplified object with code, name and price or null if not found
+ * or on error.
+ *
+ * @param {string} barcode
+ * @return {{code:string,name:string,price:number|null}|null}
+ */
+function lookupItem(barcode) {
+  try {
+    const item = ItemCache.get(barcode);
+    if (!item) return null;
+    return {
+      code: item.code,
+      name: item.name,
+      price: item.price
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 function fetchProductByBarcode(barcode) {
-  return ItemCache.get(barcode);
+  const item = lookupItem(barcode);
+  return item ? { ...item, barcode: barcode } : null;
 }
 
 function fetchPreviewData(barcodes) {
