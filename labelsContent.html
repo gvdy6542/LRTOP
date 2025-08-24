@@ -97,7 +97,10 @@
     display: inline-block;
   }
   .barcode {
-
+    margin-top: 4px;
+    width: 100%;
+    max-height: 40px;
+    object-fit: contain;
   }
   @media print {
     @page {
@@ -127,6 +130,14 @@
 <script>
   let labels = [];
 
+  function roundEuro(value) {
+    const multiplied = value * 1000;
+    const thirdDigit = Math.floor(multiplied) % 10;
+    const base = Math.floor(multiplied / 10);
+    const final = thirdDigit >= 5 ? base + 1 : base;
+    return (final / 100).toFixed(2);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const controls = document.querySelectorAll('.controls input, .controls select');
     controls.forEach(el => {
@@ -149,14 +160,19 @@
     const name = document.getElementById('customName').value.trim();
     const priceVal = document.getElementById('customPrice').value;
     if (!code || !name || !priceVal) return;
+
     const priceNum = parseFloat(priceVal);
-    const euro = Math.floor((priceNum / 1.95583) * 100) / 100;
+    if (isNaN(priceNum)) return;
+
+    const euro = roundEuro(priceNum / 1.95583);
     const url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
+
     labels.unshift({
       name: name,
-      price: priceNum.toFixed(2) + ' лв.   ' + euro.toFixed(2) + ' €',
-      : url
+      price: priceNum.toFixed(2) + ' лв.   ' + euro + ' €',
+      barcodeUrl: url
     });
+
     ['customCode', 'customName', 'customPrice'].forEach(id => document.getElementById(id).value = '');
     render();
   }
@@ -168,9 +184,9 @@
     preview.style.setProperty('--label-width', w);
     preview.style.setProperty('--label-height', h);
 
-    const bg = '#FFEB3B'; // фона - твърдо жълто (можеш да добавиш контрол)
-    const border = '#333'; // контур - черен (можеш да добавиш контрол)
-    const bStyle = 'solid'; // стил контур
+    const bg = '#FFEB3B';
+    const border = '#333';
+    const bStyle = 'solid';
 
     const company = document.getElementById('companyField').value.trim();
     const nSize = document.getElementById('nameSize').value + 'px';
@@ -221,7 +237,13 @@
       p.textContent = l.price;
       card.appendChild(p);
 
-    
+      if (l.barcodeUrl) {
+        const img = document.createElement('img');
+        img.src = l.barcodeUrl;
+        img.alt = 'Баркод';
+        img.className = 'barcode';
+        card.appendChild(img);
+      }
 
       preview.appendChild(card);
     });

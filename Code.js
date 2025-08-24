@@ -19,6 +19,27 @@ function loadLabelsPage() {
   return HtmlService.createHtmlOutputFromFile('labels.html').getContent();
 }
 
+function getConfig() {
+  const props = PropertiesService.getScriptProperties();
+  const data = props.getProperty("config");
+  return data ? JSON.parse(data) : {};
+}
+
+function saveConfig(config) {
+  PropertiesService.getScriptProperties().setProperty("config", JSON.stringify(config));
+}
+
+function openAdminPanel() {
+  return HtmlService.createHtmlOutputFromFile("admin.html").getContent();
+}
+
+function isAdminUser() {
+  const conf = getConfig();
+  const email = Session.getActiveUser().getEmail();
+  const list = (conf.adminEmails || "").split(/,\s*/).filter(String);
+  return list.includes(email);
+}
+
 function processBarcode(barcode) {
   let itemDetails = findItemDetailsByBarcode(barcode);      // старото търсене
   if (!itemDetails) itemDetails = findItemDetailsByBarcode_MAIN(barcode); // ← fallback
@@ -1501,6 +1522,15 @@ function getWasteReport(storeNumber) {
 
 /* ==================== Label Generator ==================== */
 
+function roundEuro(value) {
+  const multiplied = value * 1000;
+  const thirdDigit = Math.floor(multiplied) % 10;
+  const base = Math.floor(multiplied / 10);
+  const final = thirdDigit >= 5 ? base + 1 : base;
+  return (final / 100).toFixed(2);
+}
+
+
 function fetchProductByBarcode(barcode) {
   const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
   if (!sheet) return null;
@@ -1547,7 +1577,7 @@ function generateLabelsSheet(items) {
     it.name,
     it.barcode,
     it.price ? it.price.toFixed(2) : '',
-    it.price ? (it.price / EUR_RATE).toFixed(2) : ''
+    it.price ? roundEuro(it.price / 1.95583) : ''
   ]);
 
   sh.getRange(2, 1, data.length, 5).setValues(data);
@@ -1583,11 +1613,6 @@ function showMenuSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-// Останалите функции от твоя код (runGenerateLabels, fetchPreviewData, generateLabelsSheet, fetchMenuData)
-// ... не ги пипай, те си работят.
-
-
-
 // Стартира Web App
 function doGet() {
   return HtmlService
@@ -1620,14 +1645,13 @@ function fetchPreviewData() {
     if (!code || !name) continue;
     var price = parseFloat(String(raw).replace(',', '.'));
     if (isNaN(price)) continue;
-    var euro = Math.floor((price / 1.95583) * 100) / 100;
+    var euro = roundEuro(price / 1.95583);
+
     var barcodeUrl = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
     result.push({
       name: name,
-   price: '<div class="price-line">' + price.toFixed(2) + ' лв.</div>' +
-       '<div class="price-line">' + euro.toFixed(2) + ' €</div>',
-
-
+      price: '<div class="price-line">' + price.toFixed(2) + ' лв.</div>' +
+             '<div class="price-line">' + euro + ' €</div>',
       barcodeUrl: barcodeUrl
     });
   }
@@ -1649,16 +1673,15 @@ function generateLabelsSheet() {
     var code = rows[i][0], name = rows[i][1], raw = rows[i][2];
     var price = parseFloat(String(raw).replace(',', '.'));
     if (!code || !name || isNaN(price)) continue;
-    var euro = Math.floor((price / 1.95583) * 100) / 100;
+    var euro = roundEuro(price / 1.95583);
+
     dst.getRange(r, c).setWrap(true).setFontSize(12)
-       .setValue(name + String.fromCharCode(10) + price.toFixed(2) + ' лв.   ' + euro.toFixed(2) + ' €');
+       .setValue(name + String.fromCharCode(10) + price.toFixed(2) + ' лв.   ' + euro + ' €');
     var url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
     dst.getRange(r+1, c).setFormula('=IMAGE("' + url + '",4,' + h + ',' + cmToPx(0.5) + ')');
-    c++; if (c>4) { c=1; r+=2; }
+    c++; if (c > 4) { c = 1; r += 2; }
   }
 }
-
-
 
 // Добавя меню в Google Sheets UI при отваряне
 function onOpen() {
@@ -1668,27 +1691,6 @@ function onOpen() {
     .addToUi();
 }
 
-// Показва прозореца за избор (Selection.html)
-function showSelectionSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('Selection')
-    .setTitle('Избор');
-  SpreadsheetApp.getUi().showSidebar(html);
-}
-
-// Показва твоя вече съществуващ генератор (Index.html)
-function showLabelsSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('ЛР');
-  SpreadsheetApp.getUi().showSidebar(html);
-}
-
-// Показва менюто (MenuView.html)
-function showMenuSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('MenuView')
-    .setTitle('Меню');
-  SpreadsheetApp.getUi().showSidebar(html);
-}
-
 // Взима данни от лист "Меню"
 function fetchMenuData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1696,7 +1698,7 @@ function fetchMenuData() {
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var result = [];
-  for (var i = 1; i < data.length; i++) { // Прескачаме заглавния ред
+  for (var i = 1; i < data.length; i++) {
     var name = data[i][0];
     var priceRaw = data[i][1];
     if (!name) continue;
@@ -1708,17 +1710,6 @@ function fetchMenuData() {
     });
   }
   return result;
-}
-function showMenuSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('MenuView')
-    .setTitle('Меню');
-  SpreadsheetApp.getUi().showSidebar(html);
-}
-
-function showLabelsSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('ЛР');
-  SpreadsheetApp.getUi().showSidebar(html);
 }
 
 function fetchProductByBarcode(barcode) {
@@ -1739,4 +1730,3 @@ function fetchProductByBarcode(barcode) {
   }
   return null;
 }
-

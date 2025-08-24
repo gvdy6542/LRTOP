@@ -492,6 +492,7 @@
         <!-- Бутон за справка на брака -->
         <button class="green-button" onclick="openWasteModal()">Справка на брака</button>
         <button class="green-button" onclick="openLabels()">Етикети</button>
+        <button id="adminBtn" class="green-button" onclick="openAdminPanel()" style="display:none;">Admin</button>
 
     </div>
     
@@ -1072,6 +1073,15 @@ function downloadAndSave() {
         w.google = google; // expose google.script.run
       }).loadLabelsPage();
     }
+    function openAdminPanel() {
+      google.script.run.withSuccessHandler(html => {
+        const w = window.open();
+        w.document.write(html);
+        w.document.close();
+        w.google = google;
+      }).openAdminPanel();
+    }
+
 
 
     // 15. Липсващата функция: addRowToTable(...)
@@ -1290,6 +1300,13 @@ function renderRevisionTable(data) {
         .listRevisions(store);
     });
   });
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById("adminBtn");
+    google.script.run.withSuccessHandler(f => {
+      if (f) btn.style.display = "inline-block";
+    }).isAdminUser();
+  });
+
 
   function openPPRModal() {
   // 1) вадим днешната дата
