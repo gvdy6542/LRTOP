@@ -46,6 +46,14 @@
     <button id="btnRefreshAll">Обнови всички клиенти</button>
   </div>
 
+  <h3>Статистика</h3>
+  <table id="clientStats" border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr><th>clientId</th><th>Брой</th><th>Последна активност</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <script>
     function updateFolderLinks(){
       const pairs = [
@@ -102,6 +110,18 @@
       google.script.run.broadcastRefresh();
     }
 
+    function loadClientStats(){
+      google.script.run.withSuccessHandler(function(res){
+        const tbody = document.querySelector('#clientStats tbody');
+        tbody.innerHTML = '';
+        res.forEach(r=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.clientId}</td><td>${r.count}</td><td>${r.lastActive}</td>`;
+          tbody.appendChild(tr);
+        });
+      }).getClientStats();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       // wire events
       ['parentFolderId','revisionParentFolderId','pprFolderId'].forEach(id=>{
@@ -112,6 +132,7 @@
 
       loadConfig();
       updateFolderLinks();
+      loadClientStats();
     });
   </script>
 </body>
