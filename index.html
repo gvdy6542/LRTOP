@@ -10,6 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Сканиране на баркод</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="common.js"></script>
 
   <style>
   /* Скриваме всички елементи, които са със role="progressbar" (това е spinner-а на HTMLService) */
@@ -802,6 +803,7 @@ function showResumePrompt(message, data) {
 }
 
 window.onload = function() {
+  sendActivity('index_loaded');
   const saved = localStorage.getItem('revisionData');
   if (saved) {
     const ts   = localStorage.getItem('revisionTimestamp');
@@ -813,9 +815,16 @@ window.onload = function() {
   }
 };
 
+document.addEventListener('click', e => {
+  if (e.target.tagName === 'BUTTON') {
+    sendActivity('button:' + (e.target.id || e.target.textContent.trim()));
+  }
+});
+
 
     // 2. Start Revision
     function startRevision() {
+      sendActivity('start_revision');
       document.getElementById('nameFields').style.display = 'none';
       document.getElementById('barcodeInput').style.display = 'block';
       document.querySelector('.green-button').style.display = 'none';
@@ -842,6 +851,7 @@ window.onload = function() {
         if (bc.length > 20) {
           document.getElementById('outputMessage').textContent = 'Баркодът е твърде дълъг!';
         } else if (bc) {
+          sendActivity('scan:' + bc);
           processBarcode(bc);
         }
       }

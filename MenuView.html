@@ -3,6 +3,7 @@
 <head>
   <base target="_top">
   <title>Меню</title>
+  <script src="common.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,6 +23,7 @@
 
   <script>
     function loadMenu() {
+      sendActivity('load_menu');
       google.script.run.withSuccessHandler(items => {
         const container = document.getElementById('menuList');
         if (!items || items.length === 0) {
@@ -51,6 +53,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       pollRefresh();
       setInterval(pollRefresh, 60000);
+      sendActivity('menu_loaded');
     });
   </script>
 </body>

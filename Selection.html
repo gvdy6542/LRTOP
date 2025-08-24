@@ -2,6 +2,7 @@
 <html>
 <head>
   <base target="_top">
+  <script src="common.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
@@ -14,10 +15,12 @@
 
   <script>
     function openMenu() {
+      sendActivity('open_menu');
       google.script.run.showMenuSidebar();
       google.script.host.close(); // Затваря този sidebar
     }
     function openLabels() {
+      sendActivity('open_labels');
       google.script.run.showLabelsSidebar();
       google.script.host.close();
     }
@@ -36,6 +39,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       pollRefresh();
       setInterval(pollRefresh, 60000);
+      sendActivity('selection_loaded');
     });
   </script>
 </body>

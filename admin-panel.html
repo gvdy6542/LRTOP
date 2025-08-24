@@ -49,11 +49,12 @@
   <h3>Статистика</h3>
   <table id="clientStats" border="1" cellpadding="4" cellspacing="0">
     <thead>
-      <tr><th>clientId</th><th>Брой</th><th>Последна активност</th></tr>
+      <tr><th>clientId</th><th>Брой</th><th>Последна активност</th><th>Текуща дейност</th></tr>
     </thead>
     <tbody></tbody>
   </table>
 
+  <script src="common.js"></script>
   <script>
     function updateFolderLinks(){
       const pairs = [
@@ -116,7 +117,7 @@
         tbody.innerHTML = '';
         res.forEach(r=>{
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.clientId}</td><td>${r.count}</td><td>${r.lastActive}</td>`;
+          tr.innerHTML = `<td>${r.clientId}</td><td>${r.count}</td><td>${r.lastActive}</td><td>${r.activity || ''}</td>`;
           tbody.appendChild(tr);
         });
       }).getClientStats();
@@ -127,12 +128,14 @@
       ['parentFolderId','revisionParentFolderId','pprFolderId'].forEach(id=>{
         document.getElementById(id).addEventListener('input', updateFolderLinks);
       });
-      document.getElementById('btnSave').addEventListener('click', saveConfig);
-      document.getElementById('btnRefreshAll').addEventListener('click', refreshAllClients);
+      document.getElementById('btnSave').addEventListener('click', () => { saveConfig(); sendActivity('save_config'); });
+      document.getElementById('btnRefreshAll').addEventListener('click', () => { refreshAllClients(); sendActivity('refresh_clients'); });
 
       loadConfig();
       updateFolderLinks();
       loadClientStats();
+      setInterval(loadClientStats, 1000);
+      sendActivity('admin_loaded');
     });
   </script>
 </body>
