@@ -4,7 +4,7 @@ const EUR_RATE   = 1.95583;                                           // кур�
 var processedFilesList = [];
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index.html');
+  return HtmlService.createHtmlOutputFromFile('index');
 }
 
 function loadReferencePage() {
@@ -1599,9 +1599,9 @@ function showSelectionSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-// Показва твоя вече съществуващ генератор (Index.html)
+// Показва твоя вече съществуващ генератор (index.html)
 function showLabelsSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('Index')
+  var html = HtmlService.createHtmlOutputFromFile('index')
     .setTitle('ЛР');
   SpreadsheetApp.getUi().showSidebar(html);
 }
@@ -1613,17 +1613,9 @@ function showMenuSidebar() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-// Стартира Web App
-function doGet() {
-  return HtmlService
-    .createTemplateFromFile('Index')
-    .evaluate()
-    .setTitle('ЛР');
-}
-
 // Показва Sidebar
 function showSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('Index')
+  var html = HtmlService.createHtmlOutputFromFile('index')
     .setTitle('ЛР');
   SpreadsheetApp.getUi().showSidebar(html);
 }
