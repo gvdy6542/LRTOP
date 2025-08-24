@@ -20,17 +20,7 @@ function loadItemsCache() {
 
   rows.forEach(r => {
     const code = String(r[0]).trim();
-    const name = String(r[1]).trim();
-    const barcode = String(r[2]).trim();
-    const item = { code, name, barcode };
-    if (code) byCode[code] = item;
-    if (barcode) byBarcode[barcode] = item;
 
-    const shortVal = String(r[7]).trim();
-    if (shortVal) {
-      shortVal.split(/[\s,]+/).forEach(sc => {
-        sc = sc.trim();
-        if (sc) byShortCode[sc] = item;
       });
     }
   });
@@ -53,7 +43,7 @@ function loadItemsCache() {
 }
 
 /**
- * Взема артикул от кеша по код или баркод.
+ * Взема артикул от кеша по код, баркод или кратък код.
  * @param {string|number} codeOrBarcode
  * @return {{code:string,name:string,barcode?:string}|null}
  */
@@ -86,8 +76,6 @@ function getItemFromCache(codeOrBarcode) {
     return { code: item.code, name: item.name, barcode: key };
   }
 
-  if (item) {
-    return { code: item.code, name: item.name, barcode: key };
   }
   return null;
 }
