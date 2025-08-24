@@ -5,227 +5,128 @@
   <base target="_top">
   <title>Генератор на етикети</title>
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f6f8fa;
+    :root{
+      --label-w: 65mm; /* по подразбиране */
+      --label-h: 45mm;
+      --cols: 3;
+      --rows: 5;
     }
-    .panel-group {
-      max-width: 1200px;
-      margin: 20px auto;
-    }
-    .panel {
-      background: #fff;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    }
-    .panel .panel-title {
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 17px;
-      padding: 14px 22px;
-      display: flex;
-      align-items: center;
-      background: #e0e0e0;
-      border-radius: 8px 8px 0 0;
-    }
-    .panel .panel-title span { margin-right: 8px; }
-    .panel .panel-title:after {
-      content: '▼';
-      margin-left: auto;
-      font-size: 13px;
-      color: #4b4b4b;
-      transition: .2s;
-    }
-    .panel.open .panel-title:after { content: '▲'; }
-    .panel .panel-content {
-      padding: 18px 24px 10px 24px;
-      display: none;
-    }
-    .panel.open .panel-content { display: block; }
 
-    .controls-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .controls-row label {
-      font-size: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      min-width: 120px;
-    }
-    .controls-row input[type=text],
-    .controls-row input[type=number],
-    .controls-row select,
-    .controls-row input[type=color] {
-      padding: 6px;
-      font-size: 15px;
-      border: 1px solid #c1c1c1;
-      border-radius: 5px;
-      width: 100%;
-      box-sizing: border-box;
-      min-width: 90px;
-    }
-    .controls-row input[type=range] { min-width: 90px; }
+    body, html { margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f6f8fa; }
+    .panel-group{ max-width:1200px; margin:20px auto; }
+    .panel{ background:#fff; margin-bottom:8px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.07); }
+    .panel .panel-title{ cursor:pointer; font-weight:bold; font-size:17px; padding:14px 22px; display:flex; align-items:center; background:#e0e0e0; border-radius:8px 8px 0 0; }
+    .panel .panel-title span{ margin-right:8px; }
+    .panel .panel-title:after{ content:'▼'; margin-left:auto; font-size:13px; color:#4b4b4b; transition:.2s; }
+    .panel.open .panel-title:after{ content:'▲'; }
+    .panel .panel-content{ padding:18px 24px 10px 24px; display:none; }
+    .panel.open .panel-content{ display:block; }
 
-    .action-btn {
-      background: #0e8388;
-      color: #fff;
-      border: none;
-      font-weight: bold;
-      padding: 7px 18px;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-right: 10px;
-      transition: background .2s;
+    .controls-row{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:10px; }
+    .controls-row label{ font-size:14px; display:flex; flex-direction:column; gap:3px; min-width:120px; }
+    .controls-row input[type=text], .controls-row select, .controls-row input[type=color]{
+      padding:6px; font-size:15px; border:1px solid #c1c1c1; border-radius:5px; width:100%; box-sizing:border-box; min-width:90px;
     }
-    .action-btn.red { background: #e53935 !important; }
-    .action-btn:disabled { opacity: 0.6; cursor: default; }
+    .action-btn{ background:#0e8388; color:#fff; border:none; font-weight:bold; padding:7px 14px; border-radius:6px; cursor:pointer; }
+    .action-btn.red{ background:#e53935 !important; }
+    .action-btn:disabled{ opacity:.6; cursor:default; }
 
-    #preview {
-      display: grid;
-      grid-template-columns: repeat(3, 6.5cm);
-      grid-auto-rows: 4.5cm;
-      gap: 0;
-      justify-content: center;
-      background: #f6f8fa;
-      padding: 0;
+    /* Преглед на етикети */
+    #preview{ display:grid; grid-template-columns:repeat(auto-fit, var(--label-w)); grid-auto-rows:var(--label-h); gap:0; justify-content:center; background:#f6f8fa; padding:0; }
+    .card{
+      width:var(--label-w); height:var(--label-h);
+      background:var(--card-bg, #FFEB3B); border:2px var(--card-border-style, solid) var(--card-border, #333);
+      border-radius:var(--card-radius, 10px); display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+      padding:8px 4px 6px 4px; box-sizing:border-box; position:relative; box-shadow:0 1px 3px rgba(0,0,0,0.11);
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow:hidden;
     }
-    .card {
-      width: 6.0cm;
-      height: 3.6cm;
-      background: var(--card-bg, #FFEB3B);
-      border: 2px var(--card-border-style, solid) var(--card-border, #333);
-      border-radius: var(--card-radius, 10px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 8px 4px 6px 4px;
-      box-sizing: border-box;
-      position: relative;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.11);
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-      overflow: hidden;
-    }
-    .delete-btn {
-      position: absolute; top: 2px; right: 2px;
-      background: #f35a5a;
-      border: none;
-      color: #fff;
-      font-size: 17px;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      cursor: pointer;
-      z-index: 2;
-    }
-    .company {
-      font-size: var(--company-size, 12px);
-      font-weight: bold;
-      color: #333;
-      margin: 3px 0 0 0;
-      text-align: center;
-    }
-    .name {
-      font-size: var(--name-size, 16px);
-      font-family: var(--name-font, Arial, sans-serif);
-      font-weight: bold;
-      color: #333;
-      margin: 3px 0 0 0;
-      text-align: center;
-      line-height: 1.1;
-    }
-  .price {
-  font-size: var(--price-size, 16px);
-  font-family: var(--price-font, Arial, sans-serif);
-  font-weight: bold;
-  color: #333;
-  margin: 2px 0 0 0;
-  background: white;
-  padding: 2px 4px;
-  border-radius: 3px;
-  border: 1px solid #ccc;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start; /* <-- важният момент */
-  justify-content: center;
-  line-height: 1.1;
-}
+    .delete-btn{ position:absolute; top:2px; right:2px; background:#f35a5a; border:none; color:#fff; font-size:17px; width:22px; height:22px; border-radius:50%; cursor:pointer; z-index:2; }
+    .company{ font-size:var(--company-size, 12px); font-weight:bold; color:#333; margin:3px 0 0 0; text-align:center; }
+    .name{ font-size:var(--name-size, 16px); font-family:var(--name-font, Arial, sans-serif); font-weight:bold; color:#333; margin:3px 0 0 0; text-align:center; line-height:1.1; }
+    .price{ font-size:var(--price-size, 16px); font-family:var(--price-font, Arial, sans-serif); font-weight:bold; color:#333; margin:2px 0 0 0;
+            background:#fff; padding:2px 4px; border-radius:3px; border:1px solid #ccc; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; line-height:1.1; }
 
+    /* Мини Excel – ясни клетки */
+    .grid-wrap{ border:1px solid #c0c6cc; border-radius:8px; overflow:hidden; background:#fff; }
+    table.grid{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+    }
+    table.grid thead th{
+      position:sticky; top:0;
+      background:#f3f5f7;
+      border:1px solid #c0c6cc;
+      padding:8px;
+      font-weight:600; font-size:13px;
+    }
+    table.grid tbody td{
+      border:1px solid #d0d7de;
+      padding:0;
+    }
+    .ce{
+      display:block; width:100%; min-height:36px; padding:8px; box-sizing:border-box;
+      outline:none; border:0; font-size:14px; font-family:inherit; white-space:pre-wrap; word-break:break-word; background:#fff;
+    }
+    .ce:hover{ box-shadow: inset 0 0 0 2px #cde3ff; }
+    .ce:focus{ box-shadow: inset 0 0 0 2px #79b0ff; background:#fffdf0; }
 
+    .col-num{ width:180px; }
+    .col-name{ }
+    .col-price{ width:160px; text-align:left; }
+    .row-tools{ width:72px; text-align:center; }
+    .row-tools .action-btn{ padding:6px 8px; }
 
+   @media print{
+  /* Автоматично ориентиране – може да сменяш portrait <-> landscape */
+  @page{ size: auto; margin:10mm; } /* 10mm = 1cm */
 
-    /* Коригиран @media print блок */
-    @media print {
-  /* 1) Настройка A4 portrait с горен margin */
-  @page {
-    size: A4 portrait;
-    /* задаваме само горен margen 10 мм, останалите 0 */
-    margin: 8mm 0mm 0mm 0mm;
+  html, body{
+    background:#fff !important;
+    margin:0 !important;
+    padding:0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  html, body {
-    background: #fff !important;
-    margin: 0 !important;
-    padding: 0 !important;
+
+  /* Скриваме контролите и бутоните */
+  .panel, .panel-title, .panel-content, .action-btn{ display:none !important; }
+
+  /* Зоната с етикети */
+  #preview{
+    width:100% !important;
+    height:auto !important;
+    margin:0 auto !important;
+    display:grid !important;
+    grid-template-columns: repeat(var(--cols, 3), var(--label-w)) !important;
+    grid-template-rows: auto !important;
+    gap:0 !important;
+    background:#fff !important;
   }
-  /* 2) Скриваме UI */
-  .panel,
-  .panel-title,
-  .panel-content,
-  .action-btn {
-    display: none !important;
+
+  /* Етикетите */
+  .card{
+    box-shadow:none !important;
+    page-break-inside:avoid !important;
+    margin:0 !important;
+    padding:0 !important;
+    width:var(--label-w) !important;
+    height:var(--label-h) !important;
+    border-radius:var(--card-radius, 10px) !important;
+    border:2px var(--card-border-style, solid) var(--card-border, #333) !important;
+    overflow:hidden !important;
   }
-  /* 3) Preview да запълни страницата, с допълнителен padding-top */
-  #preview {
-    width: 200mm !important;
-    height: 200mm !important; /* намалихме височината, защото вече имаме 10mm margin-top */
-    margin: 0 !important;
-    padding-top: 10mm !important; /* гарантираме горно отстояние */
-    display: grid !important;
-    grid-template-columns: repeat(3, 60mm) !important;
-    grid-template-rows: repeat(500, 36mm) !important;
-    gap: 0 !important;
-    background: #fff !important;
-  }
-  /* 4) Етикетите */
-  .card {
-    box-shadow: none !important;
-    page-break-inside: avoid !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 60mm !important;
-    height: 36mm !important;
-    border: 2px var(--card-border-style, solid) var(--card-border, #333) !important;
-    border-radius: var(--card-radius, 10px) !important;
- 
-    overflow: hidden !important;
-  }
-  .card .company,
-  .card .name,
-  .card .price,
-  {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  .delete-btn {
-    display: none !important;
-  }
+
+  .delete-btn{ display:none !important; }
 }
 
   </style>
 </head>
 <body>
   <div class="panel-group">
-    <!-- Настройки за етикет -->
-    <div class="panel" id="panel-label">
+
+    <!-- Настройки за етикет (отворен) -->
+    <div class="panel open" id="panel-label">
       <div class="panel-title"><span>🟨</span>Настройки за етикет</div>
       <div class="panel-content">
         <div class="controls-row">
@@ -233,11 +134,7 @@
           <label>Цвят контур:<input type="color" id="borderPicker" value="#333333"></label>
           <label>Стил контур:
             <select id="borderStylePicker">
-              <option value="solid">Solid</option>
-              <option value="double">Double</option>
-              <option value="dotted">Dotted</option>
-              <option value="dashed">Dashed</option>
-              <option value="groove">Groove</option>
+              <option value="solid">Solid</option><option value="double">Double</option><option value="dotted">Dotted</option><option value="dashed">Dashed</option><option value="groove">Groove</option>
             </select>
           </label>
           <label>Размер име (px):<input type="number" id="nameSize" value="22" min="10" max="32"></label>
@@ -245,131 +142,336 @@
           <label>Размер фирма (px):<input type="number" id="companySize" value="18" min="8" max="32"></label>
           <label>Шрифт име:
             <select id="nameFont">
-              <option value="'Times New Roman', serif">Times New Roman</option>
-              <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
-              <option value="Arial, sans-serif">Arial</option>
-              <option value="Tahoma, sans-serif">Tahoma</option>
-              
+              <option value="'Times New Roman', serif">Times New Roman</option><option value="'Segoe UI', Arial, sans-serif">Segoe UI</option><option value="Arial, sans-serif">Arial</option><option value="Tahoma, sans-serif">Tahoma</option>
             </select>
           </label>
           <label>Шрифт цена:
             <select id="priceFont">
-              <option value="'Times New Roman', serif">Times New Roman</option>
-              <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
-              <option value="Arial, sans-serif">Arial</option>
-              <option value="Tahoma, sans-serif">Tahoma</option>
-              
+              <option value="'Times New Roman', serif">Times New Roman</option><option value="'Segoe UI', Arial, sans-serif">Segoe UI</option><option value="Arial, sans-serif">Arial</option><option value="Tahoma, sans-serif">Tahoma</option>
             </select>
           </label>
           <label>Заобляне (px):<input type="number" id="radiusPicker" value="10" min="0" max="30"></label>
+
+          <!-- Размер етикет -->
+          <label>Размер (пресет):
+            <select id="labelPreset">
+              <option value="65,45">Стандартен 65×45 мм</option>
+              <option value="80,50">Голям 80×50 мм</option>
+              <option value="50,35">Малък 50×35 мм</option>
+              <option value="custom">Ръчно</option>
+            </select>
+          </label>
+          <label>Ширина (мм):<input type="number" id="labelWidth" value="65" min="20" max="210" step="1"></label>
+          <label>Височина (мм):<input type="number" id="labelHeight" value="45" min="20" max="287" step="1"></label>
         </div>
       </div>
     </div>
-    <!-- Настройки за текст (фирма) -->
+
+    <!-- Настройки за текст (фирма) – затворен -->
     <div class="panel" id="panel-text">
-      <div class="panel-title"><span>🔤</span>Настройки за текст</div>
+    <!--  <div class="panel-title"><span>🔤</span>Настройки за текст</div>-->
       <div class="panel-content">
-   <div class="controls-row">
-  <label>Фирма:
-    <input type="text" id="companyField" value="">
-  </label>
-  <label>Цвят фирма:
-    <input type="color" id="companyColor" value="#000000">
-  </label>
-</div>
+        <div class="controls-row">
+          <label>Фирма:<input type="text" id="companyField" value=""></label>
+          <label>Цвят фирма:<input type="color" id="companyColor" value="#000000"></label>
         </div>
       </div>
     </div>
-    <!-- Настройки за баркод -->
-    <div class="panel" id="panel-barcode">
-      <div class="panel-title"><span>📦</span>Настройки за баркод</div>
+
+    <!-- Мини Excel – затворен -->
+    <div class="panel" id="panel-mini-excel">
+      <div class="panel-title"><span>📋</span>Мини Excel (постави от Excel/CSV)</div>
       <div class="panel-content">
-        <div class="controls-row">
-          <label>Размер баркод (%):<input type="range" id="barcodeSize" value="0" min="0" max="0"></label>
+        <div class="controls-row" style="gap:10px;">
+          <button class="action-btn" onclick="addBlankRows(10)">+10 реда</button>
+          <button class="action-btn" onclick="clearGrid()">Изчисти</button>
+          <button class="action-btn red" onclick="generateFromGrid()">Генерирай етикети от таблицата</button>
+          <div style="font-size:13px;color:#555;">Колони: <b>Номер</b> | <b>Описание</b> | <b>Цена</b>. Поставяй с Ctrl+V директно в клетка.</div>
+        </div>
+
+        <div class="grid-wrap">
+          <table class="grid" id="grid">
+            <thead>
+              <tr>
+                <th class="col-num">Номер</th>
+                <th class="col-name">Описание</th>
+                <th class="col-price">Цена (лв)</th>
+                <th class="row-tools">Действия</th>
+              </tr>
+            </thead>
+            <tbody id="gridBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
-    <!-- Действия и сканиране -->
-    <div class="panel open" id="panel-actions">
-      <div class="panel-title"><span>⚡</span>Действия и сканиране</div>
+
+    <!-- Действия – затворен -->
+    <div class="panel" id="panel-actions">
+      <div class="panel-title"><span>⚡</span>Действия</div>
       <div class="panel-content">
         <div class="controls-row">
-        <label style="font-size:18px;">
-  Сканирай баркод:
-  <input
-    type="text"
-    id="barcodeScan"
-    autofocus
-    placeholder="Сканирай тук"
-    style="font-size:22px;width:260px;background:#d4f8d4;border:1px solid #9ad99a;"
-  >
-</label>
+          <label style="font-size:18px;">
+          <!--  Сканирай код (само попълва полетата):
+            <input type="text" id="barcodeScan" placeholder="Сканирай тук"
+                   style="font-size:18px;width:260px;background:#d4f8d4;border:1px solid #9ad99a;">-->
+          </label>
 
           <label>Име:<input type="text" id="customName" placeholder="Име"></label>
-          <label>Цена:<input type="number" id="customPrice" placeholder="Цена" step="0.01"></label>
+
+          <!-- Цена като TEXT, приема и . и , -->
+          <label>Цена:
+            <input type="text" id="customPrice" placeholder="Цена"
+                   oninput="this.value=this.value.replace(/[^0-9.,-]/g,'')">
+          </label>
+
           <label>Код:<input type="text" id="customCode" placeholder="Код"></label>
+
           <button class="action-btn red" id="btnGenerate" onclick="generate()">Стартирай</button>
           <button class="action-btn" id="addBtn" onclick="addCustom()">Добави етикет</button>
           <button class="action-btn" id="btnPrint" onclick="window.print()" disabled>Печат</button>
-          <button class="action-btn" onclick="clearAll()">Изчисти</button>
+          <button class="action-btn" onclick="clearAll()">Изчисти етикетите</button>
         </div>
       </div>
     </div>
+
     <!-- Визуализация на етикети -->
     <div id="preview"></div>
   </div>
 
- <script>
-  // toggle на панелите
-  document.querySelectorAll('.panel-title').forEach(el => {
-    el.onclick = () => el.parentElement.classList.toggle('open');
+<script>
+  /* Toggle панелите (делегация) */
+  document.addEventListener('click', (e)=>{
+    const ttl = e.target.closest('.panel-title');
+    if (!ttl) return;
+    const panel = ttl.closest('.panel');
+    panel.classList.toggle('open');
   });
 
-  let labels = [];
-
-  // генериране на етикети от сървъра
-  function generate(){
-    document.getElementById('btnGenerate').disabled = true;
-    google.script.run.withSuccessHandler(labs => {
-      labels = labs;
-      render();
-      document.getElementById('btnGenerate').disabled = false;
-    }).runGenerateLabels();
+  // ===== Помощни =====
+  function roundEuro(value) {
+    const x=value*1000, third=Math.floor(x)%10, base=Math.floor(x/10);
+    return ((third>=5?base+1:base)/100).toFixed(2);
   }
 
-  // добавяне на потребителски артикул
-  function addCustom(){
-    const code = document.getElementById('customCode').value.trim(),
-          name = document.getElementById('customName').value.trim(),
-          priceVal = document.getElementById('customPrice').value,
-          company = document.getElementById('companyField').value;
-    if(!code || !name || !priceVal) return;
+  // Парсване на цена – приема и . и ,
+  function normalizePrice(v){
+    if (v==null) return null;
+    let s = String(v).trim().replace(/\s/g,'');
+    if (s === '') return null;
 
-    const priceNum = parseFloat(priceVal),
-          euro = Math.floor((priceNum/1.95583)*100)/100,
-          url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' +
-                encodeURIComponent(code) + '&includetext';
+    const hasComma = s.includes(',');
+    const hasDot   = s.includes('.');
 
-    labels.unshift({
-      name,
-      price: `<div style="font-size: 1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size: 0.85em;">${euro.toFixed(2)} €</div>`,
+    if (hasComma && hasDot){
+      // приемаме, че ПОСЛЕДНИЯТ разделител е десетичният
+      const lastComma = s.lastIndexOf(',');
+      const lastDot   = s.lastIndexOf('.');
+      if (lastComma > lastDot){
+        // , е десетичният -> махаме всички точки (хилядни)
+        s = s.replace(/\./g,'').replace(',', '.');
+      } else {
+        // . е десетичният -> махаме всички запетаи (хилядни)
+        s = s.replace(/,/g,'');
+      }
+    } else if (hasComma && !hasDot){
+      s = s.replace(',', '.'); // единствен разделител , -> .
+    } // иначе оставяме както е
 
+    const num = parseFloat(s);
+    return isNaN(num) ? null : num;
+  }
 
-      barcodeUrl: url
+  // ===== Динамичен размер на етикета =====
+  let labelWmm = 65, labelHmm = 45;
+  function setLabelSize(mmW, mmH){
+    labelWmm = Math.max(20, Math.min(210, Number(mmW)||65));
+    labelHmm = Math.max(20, Math.min(287, Number(mmH)||45));
+    document.documentElement.style.setProperty('--label-w', labelWmm + 'mm');
+    document.documentElement.style.setProperty('--label-h', labelHmm + 'mm');
+    try{ localStorage.setItem('LABEL_SIZE', JSON.stringify({w:labelWmm, h:labelHmm})); }catch(e){}
+    recalcPrintGrid(); render();
+  }
+  function recalcPrintGrid(){
+    const pageW = 210, pageH = 297, topMargin = 10;
+    const usableH = pageH - topMargin;
+    const cols = Math.max(1, Math.floor(pageW / labelWmm));
+    const rows = Math.max(1, Math.floor(usableH / labelHmm));
+    document.getElementById('preview').style.setProperty('--cols', cols);
+    document.getElementById('preview').style.setProperty('--rows', rows);
+    document.documentElement.style.setProperty('--cols', cols);
+    document.documentElement.style.setProperty('--rows', rows);
+  }
+
+  // ===== Мини Excel (contenteditable grid) =====
+  function addBlankRows(n=1){
+    const tb = document.getElementById('gridBody');
+    for(let i=0;i<n;i++){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><div class="ce" contenteditable="true" data-col="num"></div></td>
+        <td><div class="ce" contenteditable="true" data-col="name"></div></td>
+        <td><div class="ce" contenteditable="true" data-col="price"></div></td>
+        <td class="row-tools"><button class="action-btn" onclick="this.closest('tr').remove()">X</button></td>
+      `;
+      tb.appendChild(tr);
+    }
+    wireCells();
+  }
+  function clearGrid(){ document.getElementById('gridBody').innerHTML=''; addBlankRows(10); }
+
+  // Paste от Excel/CSV – разнася по клетки (без разделяне по запетая)
+  function handlePaste(e){
+    const target = e.target;
+    if (!target.classList.contains('ce')) return;
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (!text) return;
+    e.preventDefault();
+
+    const rows = text.replace(/\r/g,'')
+      .split('\n')
+      .filter(r=>r.length>0)
+      .map(r=>r.split(/\t|;|\|/)); // таб, ; или |
+
+    const startCell = target;
+    const startTd = startCell.parentElement;
+    const startTr = startTd.parentElement;
+    const startRowIndex = Array.from(startTr.parentElement.children).indexOf(startTr);
+    const startColIndex = Array.from(startTr.children).indexOf(startTd); // 0,1,2 = num,name,price
+
+    const needRows = startRowIndex + rows.length - document.getElementById('gridBody').children.length;
+    if (needRows > 0) addBlankRows(needRows);
+
+    rows.forEach((cols, rIdx) => {
+      const tr = document.getElementById('gridBody').children[startRowIndex + rIdx];
+      for(let c=0; c<Math.min(3, cols.length); c++){
+        const td = tr.children[startColIndex + c];
+        if (!td) continue;
+        const cell = td.querySelector('.ce');
+        if (!cell) continue;
+        cell.textContent = cols[c].trim();
+        if (cell.dataset.col === 'price') {
+          cell.textContent = cell.textContent.replace(/[^0-9.,-]/g,'');
+        }
+      }
+    });
+  }
+
+  // Навигация + live филтър за цена
+  function handleKeydown(e){
+    if (!e.target.classList.contains('ce')) return;
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      const td = e.target.parentElement;
+      const tr = td.parentElement;
+      const col = Array.from(tr.children).indexOf(td);
+      const body = tr.parentElement;
+      const rowIdx = Array.from(body.children).indexOf(tr);
+      if (rowIdx === body.children.length - 1) addBlankRows(1);
+      const next = body.children[rowIdx + 1].children[col].querySelector('.ce');
+      next.focus();
+      placeCaretEnd(next);
+    }
+  }
+  function handleInput(e){
+    const el = e.target;
+    if (!el.classList.contains('ce')) return;
+    if (el.dataset.col === 'price'){
+      el.textContent = el.textContent.replace(/[^0-9.,-]/g,'');
+      placeCaretEnd(el);
+    }
+  }
+  function placeCaretEnd(el){
+    const r=document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    const s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  function wireCells(){
+    document.querySelectorAll('.ce').forEach(c=>{
+      c.removeEventListener('paste', handlePaste);
+      c.removeEventListener('keydown', handleKeydown);
+      c.removeEventListener('input', handleInput);
+      c.addEventListener('paste', handlePaste);
+      c.addEventListener('keydown', handleKeydown);
+      c.addEventListener('input', handleInput);
+    });
+  }
+
+  // ===== Етикети =====
+  let labels = [];
+  function clearAll(){ labels=[]; render(); }
+
+  function generateFromGrid(){
+    const tb = document.getElementById('gridBody');
+    const rows = Array.from(tb.querySelectorAll('tr'));
+    if (!rows.length){ alert('Таблицата е празна.'); return; }
+
+    labels = [];
+    rows.forEach(tr=>{
+      const ce = tr.querySelectorAll('.ce');
+      const name = (ce[1]?.textContent || '').trim();
+      const priceNum = normalizePrice((ce[2]?.textContent || '').trim());
+      if (!name || priceNum==null) return;
+      const euro = roundEuro(priceNum / 1.95583);
+      labels.push({
+        name,
+        price: `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:1em;">${euro} €</div>`
+      });
     });
 
-    ['customCode','customName','customPrice']
-      .forEach(id => document.getElementById(id).value = '');
+    if (!labels.length){ alert('Няма валидни редове (изисква се Описание и Цена).'); return; }
     render();
+    document.getElementById('btnPrint').disabled = false;
   }
 
-  // изчистване на всички етикети
-  function clearAll(){
-    labels = [];
-    render();
+  /* Стартирай – Apps Script: връща масив [{name, price}, ...] */
+  function generate(){
+    const btn = document.getElementById('btnGenerate');
+    if (btn) btn.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(labs => {
+        labels = Array.isArray(labs) ? labs.map(x=>{
+          const priceNum = normalizePrice(x.price);
+          const euro = priceNum!=null ? roundEuro(priceNum / 1.95583) : null;
+          return {
+            name: x.name || '',
+            price: priceNum!=null
+              ? `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:0.85em;">${euro} €</div>`
+              : ''
+          };
+        }) : [];
+        render();
+        if (btn) btn.disabled = false;
+        const p = document.getElementById('btnPrint');
+        if (p) p.disabled = labels.length === 0;
+      })
+      .withFailureHandler(err => {
+        alert('Грешка при генериране: ' + (err && err.message ? err.message : err));
+        if (btn) btn.disabled = false;
+      })
+      .runGenerateLabels();
   }
 
-  // рендериране на етикетите в preview
+  /* Ръчно добавяне от полетата (без баркод визуализация) */
+  function addCustom(){
+    const code = (document.getElementById('customCode')?.value || '').trim();
+    const name = (document.getElementById('customName')?.value || '').trim();
+    const priceStr = (document.getElementById('customPrice')?.value || '').trim();
+    const priceNum = normalizePrice(priceStr);
+    if(!code || !name || priceStr===''){ alert('Попълни Код, Име и Цена.'); return; }
+    if (priceNum==null){ alert('Невалидна цена. Допуска се и , и .'); return; }
+
+    const euro = roundEuro(priceNum / 1.95583);
+    labels.unshift({
+      name,
+      price: `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:0.85em;">${euro} €</div>`
+    });
+
+    ['customCode','customName','customPrice'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    render();
+    const p = document.getElementById('btnPrint'); if (p) p.disabled = labels.length === 0;
+  }
+
+  // ===== Рендер =====
   function render(){
     const preview = document.getElementById('preview');
     preview.innerHTML = '';
@@ -384,20 +486,20 @@
           priceFont = document.getElementById('priceFont').value,
           radius = document.getElementById('radiusPicker').value + 'px',
           company = document.getElementById('companyField').value,
-          bSize = document.getElementById('barcodeSize').value + '%';
+          companyColor = document.getElementById('companyColor')?.value || '#000';
 
-    labels.forEach((l, idx) => {
+    labels.forEach((l, idx)=>{
       const card = document.createElement('div');
       card.className = 'card';
       [
         bg, border, bStyle,
         companySize, nameSize, priceSize,
-        nameFont, priceFont, radius, bSize
+        nameFont, priceFont, radius
       ].forEach((val, i) => {
         const props = [
           '--card-bg','--card-border','--card-border-style',
           '--company-size','--name-size','--price-size',
-          '--name-font','--price-font','--card-radius','--barcode-size'
+          '--name-font','--price-font','--card-radius'
         ];
         card.style.setProperty(props[i], val);
       });
@@ -408,37 +510,27 @@
       del.addEventListener('click', () => { labels.splice(idx,1); render(); });
       card.appendChild(del);
 
-      ['company','name','price'].forEach((cls, j) => {
-        const el = document.createElement('div');
-        el.className = cls;
-        if(cls === 'company') {
-  el.textContent = company;
-} else if(cls === 'name') {
-  el.textContent = l.name;
-} else if(cls === 'price') {
-  el.innerHTML = l.price; // <-- важна промяна
-}
+      const compTop = document.createElement('div');
+      compTop.className = 'company';
+      compTop.textContent = company;
+      compTop.style.fontSize = companySize;
+      compTop.style.color = companyColor;
+      compTop.style.fontFamily = "'Times New Roman', serif";
+      card.appendChild(compTop);
 
-        el.style.fontSize = [companySize,nameSize,priceSize][j];
-        if(cls==='name')  el.style.fontFamily = nameFont;
-        if(cls==='price') el.style.fontFamily = priceFont;
-        card.appendChild(el);
-      });
+      const nm = document.createElement('div');
+      nm.className = 'name';
+      nm.textContent = l.name;
+      nm.style.fontSize = nameSize;
+      nm.style.fontFamily = nameFont;
+      card.appendChild(nm);
 
-      const img = document.createElement('img');
-      img.className = 'barcode';
-      img.src = l.barcodeUrl;
-      img.style.width = bSize;
-      card.appendChild(img);
-
-      // добавен текст с фирма
-      const c = document.createElement('div');
-      c.className = 'company';
-      c.textContent = company;
-      c.style.fontSize   = companySize;
-      c.style.color      = document.getElementById('companyColor')?.value || '#000';
-      c.style.fontFamily = "'Times New Roman', serif";
-      card.appendChild(c);
+      const pr = document.createElement('div');
+      pr.className = 'price';
+      pr.innerHTML = l.price;
+      pr.style.fontSize = priceSize;
+      pr.style.fontFamily = priceFont;
+      card.appendChild(pr);
 
       preview.appendChild(card);
     });
@@ -446,50 +538,91 @@
     document.getElementById('btnPrint').disabled = labels.length === 0;
   }
 
-  // Остава само един DOMContentLoaded
+  // ===== Старт =====
   document.addEventListener('DOMContentLoaded', () => {
-    const scanInput = document.getElementById('barcodeScan');
-    scanInput.focus();
-
-    scanInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-
-        const code = scanInput.value.trim();
-        scanInput.value = '';
-        scanInput.select();
-        scanInput.focus();
-
-        if (!code) return;
-
-        google.script.run
-          .withSuccessHandler(data => {
-            if (!data) {
-              alert('Артикулът не е намерен!');
-            } else {
-              document.getElementById('customCode').value  = data.code;
-              document.getElementById('customName').value  = data.name;
-              document.getElementById('customPrice').value = data.price.toFixed(2);
-              addCustom();
-            }
-          })
-          .fetchProductByBarcode(code);
+    // зареди предишен размер
+    try{
+      const saved = JSON.parse(localStorage.getItem('LABEL_SIZE') || '{}');
+      if (saved.w && saved.h){
+        document.getElementById('labelWidth').value = saved.w;
+        document.getElementById('labelHeight').value = saved.h;
+        document.getElementById('labelPreset').value = 'custom';
+        toggleSizeInputs(true);
+        setLabelSize(saved.w, saved.h);
+      } else {
+        setLabelSize(65,45);
       }
-    });
+    }catch(e){ setLabelSize(65,45); }
 
-    // връзване на контролите за настройки към render()
+    // слушатели
     document.querySelectorAll(
       '#bgPicker,#borderPicker,#borderStylePicker,' +
       '#nameSize,#priceSize,#companySize,' +
-      '#nameFont,#priceFont,#radiusPicker,#barcodeSize,#companyField'
-    ).forEach(el => {
-      el.addEventListener('input', render);
-      el.addEventListener('change', render);
+      '#nameFont,#priceFont,#radiusPicker,' +
+      '#companyField,#companyColor'
+    ).forEach(el => { el.addEventListener('input', render); el.addEventListener('change', render); });
+
+    document.getElementById('labelPreset').addEventListener('change', handlePreset);
+    document.getElementById('labelWidth').addEventListener('input', ()=> setLabelSize(labelWidth.value, labelHeight.value));
+    document.getElementById('labelHeight').addEventListener('input', ()=> setLabelSize(labelWidth.value, labelHeight.value));
+    window.addEventListener('beforeprint', recalcPrintGrid);
+
+    // Мини Excel – lazy init при първо отваряне
+    let excelInited = false;
+    document.querySelector('#panel-mini-excel .panel-title').addEventListener('click', ()=>{
+      const isOpen = document.getElementById('panel-mini-excel').classList.contains('open');
+      if (!isOpen && !excelInited){ setTimeout(()=>{ addBlankRows(10); excelInited = true; }, 0); }
     });
+
+    // Скенер (Enter) – попълва полетата и добавя етикет
+    const scanInput = document.getElementById('barcodeScan');
+    if (scanInput){
+      scanInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const code = scanInput.value.trim();
+          scanInput.value = '';
+          scanInput.select();
+          scanInput.focus();
+          if (!code) return;
+
+          google.script.run
+            .withSuccessHandler(data => {
+              if (!data) {
+                alert('Артикулът не е намерен!');
+              } else {
+                document.getElementById('customCode').value  = data.code || code;
+                document.getElementById('customName').value  = data.name || '';
+                document.getElementById('customPrice').value = (data.price != null ? String(data.price).replace('.', ',') : '');
+                addCustom();
+              }
+            })
+            .withFailureHandler(err => alert('Грешка при сканиране: ' + (err && err.message ? err.message : err)))
+            .fetchProductByBarcode(code);
+        }
+      });
+    }
 
     render();
   });
-</script>
 
+  function handlePreset(){
+    const sel = document.getElementById('labelPreset').value;
+    if (sel === 'custom'){
+      toggleSizeInputs(true);
+      setLabelSize(labelWidth.value, labelHeight.value);
+    } else {
+      const [w,h] = sel.split(',').map(Number);
+      toggleSizeInputs(false);
+      document.getElementById('labelWidth').value = w;
+      document.getElementById('labelHeight').value = h;
+      setLabelSize(w,h);
+    }
+  }
+  function toggleSizeInputs(enable){
+    document.getElementById('labelWidth').disabled  = !enable;
+    document.getElementById('labelHeight').disabled = !enable;
+  }
+</script>
 </body>
 </html>
