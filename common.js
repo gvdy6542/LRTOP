@@ -1,6 +1,6 @@
 let clientId;
 function sendActivity(action){
-  if (!action) return;
+  if (!action || typeof google === 'undefined' || !google.script) return;
   const run = id => google.script.run.logClientActivity(id, action);
   if (clientId){
     run(clientId);
