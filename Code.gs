@@ -11,7 +11,6 @@ const DEFAULT_CONFIG = {
   showInterfaceButton: true,
   showReferenceButton: true,
   showLabelsButton: true,
-  showWasteButton: true,
   showPprButtons: true,
   showViewRevisionsBtn: true,
   adminEmails: ''
