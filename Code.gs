@@ -20,8 +20,20 @@ function loadItemsCache() {
 
   rows.forEach(r => {
     const code = String(r[0]).trim();
+    const name = String(r[1]).trim();
+    const barcode = String(r[2]).trim();
+    const shortCode = String(r[7]).trim();
+    if (!code && !barcode && !shortCode) return;
 
-      });
+    const item = { code: code, name: name, barcode: barcode };
+    if (code) {
+      byCode[code] = item;
+    }
+    if (barcode) {
+      byBarcode[barcode] = item;
+    }
+    if (shortCode) {
+      byShortCode[shortCode] = item;
     }
   });
 
@@ -67,17 +79,8 @@ function getItemFromCache(codeOrBarcode) {
   const data = raw ? JSON.parse(raw) : loadItemsCache();
   const key = String(codeOrBarcode).trim();
 
-  let item = data.byCode[key];
-  if (item) {
-    return { code: item.code, name: item.name, barcode: key };
-  }
-  item = data.byBarcode[key];
-  if (item) {
-    return { code: item.code, name: item.name, barcode: key };
-  }
-
-  }
-  return null;
+  const item = data.byCode[key] || data.byBarcode[key] || data.byShortCode[key];
+  return item ? { code: item.code, name: item.name, barcode: item.barcode } : null;
 }
 
 // Конфигурация по подразбиране
