@@ -575,8 +575,9 @@ function onEdit(e) {
 
       // Обработка на бройкови артикули
       const itemBarcode = scannedBarcode.substring(0, 13);
-      const itemNumber = findItemNumberByBarcode(itemBarcode);
-      itemName = findItemNameByBarcode(itemBarcode);
+      const item = getItemFromCache(itemBarcode);
+      const itemNumber = item ? item.code : null;
+      itemName = item ? item.name : null;
 
       if (itemNumber) {
         sheet.getRange("A1").setValue(itemName).setFontSize(28).setFontWeight("bold").setHorizontalAlignment("center").setBackground("#aaa9fc");
@@ -666,18 +667,6 @@ function findItemNameByCode(itemCode) {
   const item = getItemFromCache(itemCode);
   return item ? item.name : null;
 }
-// Намиране на артикулен номер по баркод чрез кеша
-function findItemNumberByBarcode(itemBarcode) {
-  const item = getItemFromCache(itemBarcode);
-  return item ? item.code : null;
-}
-
-// Намиране на име на артикул по баркод чрез кеша
-function findItemNameByBarcode(itemBarcode) {
-  const item = getItemFromCache(itemBarcode);
-  return item ? item.name : null;
-}
-
 // Функция за запис в "Опис"
 function transferToDescriptionSheet(itemCode, itemName, quantity) {
   const descriptionSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Опис");
@@ -710,36 +699,10 @@ function clearDescriptionSheet() {
 function getItemCodes() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
   const data = sheet.getRange("A:A").getValues();
-  
+
   // Връщаме само уникалните стойности от колоната
   return data.filter(row => row[0]).map(row => row[0]);
 }
-
-// Допълнителни wrapper функции към кеша
-function findItemNameInColumnA(code) {
-  return findItemNameByCode(code);
-}
-
-function findItemNameInColumnC(barcode) {
-  return findItemNameByBarcode(barcode);
-}
-
-function findItemNameByCodeInColumnC(itemCode) {
-  return findItemNameByCode(itemCode);
-}
-function getItemDataFromColumnF(itemCode) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
-  var range = sheet.getRange("A:F");  // Преглеждаме диапазона от Колона A до Колона F
-  var values = range.getValues();
-  
-  for (var i = 0; i < values.length; i++) {
-    if (values[i][0] == itemCode) {  // Сравняваме артикула в Колона A
-      return values[i][5];  // Връщаме стойността от Колона F
-    }
-  }
-  return null;  // Ако не намерим съвпадение
-}
-
 function updateItemDetails(itemCode, itemName, barcode, quantity) {
   document.getElementById("outputMessage").textContent = "Артикул: " + itemName;
 
@@ -752,10 +715,6 @@ function updateItemDetails(itemCode, itemName, barcode, quantity) {
   } else {
     showQuantityInput(itemCode, itemName, barcode, additionalInfo);
   }
-}
-function findItemNameByCodeInColumnF(itemCode) {
-  const item = getItemFromCache(itemCode);
-  return item ? item.name : null;
 }
 function findMissingValues() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();

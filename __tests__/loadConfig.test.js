@@ -45,7 +45,7 @@ describe('loadConfig', () => {
     const doc = dom.window.document;
     expect(doc.getElementById('showInterfaceButton').checked).toBe(true);
     expect(doc.getElementById('showReferenceButton').checked).toBe(false);
-    expect(doc.getElementById('showLabelsButton').checked).toBe(false);
+    expect(doc.getElementById('showLabelsButton').checked).toBe(true);
     expect(doc.getElementById('showPprButtons').checked).toBe(true);
     expect(doc.getElementById('showViewRevisionsBtn').checked).toBe(false);
   });
