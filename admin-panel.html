@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <title>Админ панел</title>
+  <link rel="stylesheet" href="admin-panel.css" />
+</head>
+<body>
+  <div class="login-container">
+    <h2>Вход</h2>
+    <input type="text" id="username" placeholder="Потребител" />
+    <input type="password" id="password" placeholder="Парола" />
+    <button id="loginBtn">Влез</button>
+  </div>
+
+  <div id="adminModal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <h2>Админ панел</h2>
+      <div id="buttonsArea"></div>
+      <div class="add-btn-form">
+        <input type="text" id="newBtnText" placeholder="Текст на бутона" />
+        <button id="addBtn">Добави бутон</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin-panel.js"></script>
+</body>
+</html>
