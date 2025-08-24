@@ -29,14 +29,15 @@
   <script>
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
+        const toBool = v => v === true || String(v).toUpperCase() === 'TRUE';
         document.getElementById('parentFolderId').value = c.parentFolderId;
         document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId;
         document.getElementById('pprFolderId').value = c.pprFolderId;
-        document.getElementById('showInterfaceButton').checked = c.showInterfaceButton;
-        document.getElementById('showReferenceButton').checked = c.showReferenceButton;
-        document.getElementById('showLabelsButton').checked = c.showLabelsButton;
-        document.getElementById('showPprButtons').checked = c.showPprButtons;
-        document.getElementById('showViewRevisionsBtn').checked = c.showViewRevisionsBtn;
+        document.getElementById('showInterfaceButton').checked = toBool(c.showInterfaceButton);
+        document.getElementById('showReferenceButton').checked = toBool(c.showReferenceButton);
+        document.getElementById('showLabelsButton').checked = toBool(c.showLabelsButton);
+        document.getElementById('showPprButtons').checked = toBool(c.showPprButtons);
+        document.getElementById('showViewRevisionsBtn').checked = toBool(c.showViewRevisionsBtn);
       }).getConfig();
     }
     function saveConfig(){
