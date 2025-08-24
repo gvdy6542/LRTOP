@@ -201,6 +201,18 @@ function authorizeDrive() {
   DriveApp.getRootFolder();
 }
 
+function startNewRevision(names, store) {
+  const ss = SpreadsheetApp.openById(CONFIG_SS_ID);
+  const sheetName = 'StartedRevisions';
+  let sh = ss.getSheetByName(sheetName);
+  if (!sh) {
+    sh = ss.insertSheet(sheetName);
+    sh.getRange(1,1,1,3).setValues([["Timestamp","Names","Store"]]);
+  }
+  sh.appendRow([new Date(), (names || []).join(', '), store]);
+  return 'OK';
+}
+
 
 
 

@@ -825,10 +825,33 @@ document.addEventListener('click', e => {
     // 2. Start Revision
     function startRevision() {
       sendActivity('start_revision');
-      document.getElementById('nameFields').style.display = 'none';
-      document.getElementById('barcodeInput').style.display = 'block';
-      document.getElementById('startRevisionBtn').style.display = 'none';
-      document.getElementById('barcodeInput').focus();
+
+      const btn   = document.getElementById('startRevisionBtn');
+      btn.disabled = true;
+
+      localStorage.removeItem('revisionData');
+      localStorage.removeItem('revisionTimestamp');
+      clearTable();
+
+      const names = [
+        document.getElementById('name1').value.trim(),
+        document.getElementById('name2').value.trim()
+      ].filter(Boolean);
+      const store = document.getElementById('store').value.trim();
+
+      google.script.run
+        .withSuccessHandler(() => {
+          document.getElementById('nameFields').style.display = 'none';
+          document.getElementById('barcodeInput').style.display = 'block';
+          btn.style.display = 'none';
+          document.getElementById('barcodeInput').focus();
+          document.getElementById('outputMessage').textContent = 'Ревизията е стартирана.';
+        })
+        .withFailureHandler(err => {
+          document.getElementById('outputMessage').textContent = 'Грешка: ' + err;
+          btn.disabled = false;
+        })
+        .startNewRevision(names, store);
     }
 
     // 3. Scroll-to-top
