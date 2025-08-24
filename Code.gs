@@ -1,5 +1,6 @@
-const MAIN_SS_ID = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени
-const EUR_RATE   = 1.95583;                                           // курс евро
+const MAIN_SS_ID   = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цени
+const CONFIG_SS_ID = MAIN_SS_ID;                                      // конфигурационен Spreadsheet
+const EUR_RATE     = 1.95583;                                         // курс евро
 
 var processedFilesList = [];
 
@@ -35,7 +36,7 @@ function loadLabelsPage() {
 }
 
 function getConfig() {
-  var ss = SpreadsheetApp.getActive();
+  var ss = SpreadsheetApp.openById(CONFIG_SS_ID);
   var sheet = ss.getSheetByName('Config');
   if (!sheet) {
     sheet = ss.insertSheet('Config');
@@ -67,7 +68,7 @@ function getConfig() {
 }
 
 function saveConfig(config) {
-  var ss = SpreadsheetApp.getActive();
+  var ss = SpreadsheetApp.openById(CONFIG_SS_ID);
   var sheet = ss.getSheetByName('Config');
   if (!sheet) {
     sheet = ss.insertSheet('Config');
