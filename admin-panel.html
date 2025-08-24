@@ -26,6 +26,7 @@
   <label><input type="checkbox" id="showPprButtons"> Показвай бутоните за ППР</label>
   <label><input type="checkbox" id="showViewRevisionsBtn"> Показвай "Преглед на ревизии"</label>
   <button onclick="saveConfig()">Запази</button>
+  <button onclick="refreshAllClients()">Обнови всички клиенти</button>
   <script>
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
@@ -57,6 +58,9 @@
           loadConfig();
         })
         .saveConfig(c);
+    }
+    function refreshAllClients(){
+      google.script.run.broadcastRefresh();
     }
     document.addEventListener('DOMContentLoaded', loadConfig);
   </script>

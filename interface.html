@@ -32,5 +32,21 @@
 <body>
   <h1>Съдържание на папката</h1>
   <iframe src="https://drive.google.com/embeddedfolderview?id=1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG#grid"></iframe>
+  <script>
+    let lastRefreshTs = null;
+    function pollRefresh(){
+      google.script.run.withSuccessHandler(function(ts){
+        if(lastRefreshTs && ts && ts !== lastRefreshTs){
+          if(window.refreshConfig) window.refreshConfig();
+          location.reload();
+        }
+        lastRefreshTs = ts;
+      }).getRefreshTimestamp();
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      pollRefresh();
+      setInterval(pollRefresh, 60000);
+    });
+  </script>
 </body>
 </html>

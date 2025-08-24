@@ -126,6 +126,18 @@ function saveAdminButtons(buttons) {
   props.setProperty('adminButtons', JSON.stringify(buttons || []));
 }
 
+function broadcastRefresh() {
+  const props = PropertiesService.getScriptProperties();
+  const ts = Date.now().toString();
+  props.setProperty('refreshTimestamp', ts);
+  return ts;
+}
+
+function getRefreshTimestamp() {
+  const props = PropertiesService.getScriptProperties();
+  return props.getProperty('refreshTimestamp') || '';
+}
+
 function processBarcode(barcode) {
   let itemDetails = findItemDetailsByBarcode(barcode);      // старото търсене
   if (!itemDetails) itemDetails = findItemDetailsByBarcode_MAIN(barcode); // ← fallback

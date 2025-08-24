@@ -1568,8 +1568,22 @@ function applyConfig(cfg){
 function refreshConfig(){
   google.script.run.withSuccessHandler(applyConfig).getConfig();
 }
+let lastRefreshTs = null;
+function pollRefresh(){
+  google.script.run.withSuccessHandler(function(ts){
+    if(lastRefreshTs && ts && ts !== lastRefreshTs){
+      refreshConfig();
+      location.reload();
+    }
+    lastRefreshTs = ts;
+  }).getRefreshTimestamp();
+}
 
-document.addEventListener('DOMContentLoaded', refreshConfig);
+document.addEventListener('DOMContentLoaded', () => {
+  refreshConfig();
+  pollRefresh();
+  setInterval(pollRefresh, 60000);
+});
 </script>
 <script>
 document.getElementById('loginBtn').addEventListener('click', () => {
