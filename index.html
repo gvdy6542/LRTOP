@@ -802,18 +802,20 @@ function showResumePrompt(message, data) {
   });
 }
 
-window.onload = function() {
+function init() {
   sendActivity('index_loaded');
   const saved = localStorage.getItem('revisionData');
   if (saved) {
-    const ts   = localStorage.getItem('revisionTimestamp');
+    const ts = localStorage.getItem('revisionTimestamp');
     const date = ts ? new Date(ts).toLocaleString() : null;
-    const msg  = date
+    const msg = date
       ? `Незавършена ревизия от ${date}.`
       : 'Незавършена ревизия е намерена.';
     showResumePrompt(msg, saved);
   }
-};
+}
+
+document.addEventListener('DOMContentLoaded', init);
 
 document.addEventListener('click', e => {
   if (e.target.tagName === 'BUTTON') {
