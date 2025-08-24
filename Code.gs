@@ -25,7 +25,11 @@ function doGet() {
   const clientId = Session.getTemporaryActiveUserKey();
   logClientActivity(clientId, 'load');
 
-  return HtmlService.createHtmlOutputFromFile('index');
+  return HtmlService.createTemplateFromFile('index').evaluate();
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 function loadReferencePage() {
@@ -1771,7 +1775,8 @@ function showSelectionSidebar() {
 
 // Показва твоя вече съществуващ генератор (index.html)
 function showLabelsSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('index')
+  var html = HtmlService.createTemplateFromFile('index')
+    .evaluate()
     .setTitle('ЛР');
   SpreadsheetApp.getUi().showSidebar(html);
 }
@@ -1785,7 +1790,8 @@ function showMenuSidebar() {
 
 // Показва Sidebar
 function showSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('index')
+  var html = HtmlService.createTemplateFromFile('index')
+    .evaluate()
     .setTitle('ЛР');
   SpreadsheetApp.getUi().showSidebar(html);
 }
