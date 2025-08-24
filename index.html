@@ -127,6 +127,11 @@
     margin-bottom: 24px;
   }
 
+  #pprButtons {
+    display: flex;
+    gap: 16px;
+  }
+
   #outputMessage {
     margin-top: 16px;
     padding: 16px 20px;
@@ -495,13 +500,15 @@
       <button id="interfaceButton" onclick="openinterface()" style="display:none;">Обработка</button>
       <button id="referenceButton" onclick="openReference()" style="display:none;">ИНВЕНТАРИЗАЦИЯ</button>
        <button id="viewRevisionsBtn"  class="green-button">Преглед на ревизии</button>  <!-- НОВ -->
-       <!-- 1. Бутон за Въвеждане на ППР -->
-       <button id="pprBtn" class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
-       <!-- 2. Бутон за проверка/корекция на ППР -->
-        <button id="checkPprBtn" class="green-button" onclick="openCheckPprModal()">Проверка на ППР</button>
-        <!-- Бутон за справка на брака -->
-        <button id="wasteBtn" class="green-button" onclick="openWasteModal()">Справка на брака</button>
-        <button id="labelsBtn" class="green-button" onclick="openLabels()">Етикети</button>
+       <div id="pprButtons">
+         <!-- 1. Бутон за Въвеждане на ППР -->
+         <button id="pprBtn" class="green-button" onclick="openPPRModal()">Въвеждане на ППР</button>
+         <!-- 2. Бутон за проверка/корекция на ППР -->
+         <button id="checkPprBtn" class="green-button" onclick="openCheckPprModal()">Проверка на ППР</button>
+         <!-- Бутон за справка на брака -->
+         <button id="wasteBtn" class="green-button" onclick="openWasteModal()">Справка на брака</button>
+       </div>
+        <button id="labelsButton" class="green-button" onclick="openLabels()">Етикети</button>
         <button id="adminBtn" class="green-button" onclick="openAdminPanel()" style="display:none;">Admin</button>
 
     </div>
@@ -1553,10 +1560,8 @@ function applyConfig(cfg){
   document.getElementById('interfaceButton').style.display = cfg.showInterfaceButton ? 'inline-block' : 'none';
   document.getElementById('referenceButton').style.display = cfg.showReferenceButton ? 'inline-block' : 'none';
   document.getElementById('viewRevisionsBtn').style.display = cfg.showViewRevisionsBtn ? 'inline-block' : 'none';
-  document.getElementById('pprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
-  document.getElementById('checkPprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
-  document.getElementById('wasteBtn').style.display = cfg.showWasteButton ? 'inline-block' : 'none';
-  document.getElementById('labelsBtn').style.display = cfg.showLabelsButton ? 'inline-block' : 'none';
+  document.getElementById('pprButtons').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
+  document.getElementById('labelsButton').style.display = cfg.showLabelsButton ? 'inline-block' : 'none';
 }
 
 function refreshConfig(){

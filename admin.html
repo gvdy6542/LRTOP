@@ -23,7 +23,6 @@
   <label><input type="checkbox" id="showInterfaceButton"> Показвай "Обработка"</label>
   <label><input type="checkbox" id="showReferenceButton"> Показвай "ИНВЕНТАРИЗАЦИЯ"</label>
   <label><input type="checkbox" id="showLabelsButton"> Показвай "Етикети"</label>
-  <label><input type="checkbox" id="showWasteButton"> Показвай "Справка на брака"</label>
   <label><input type="checkbox" id="showPprButtons"> Показвай бутоните за ППР</label>
   <label><input type="checkbox" id="showViewRevisionsBtn"> Показвай "Преглед на ревизии"</label>
   <button onclick="saveConfig()">Запази</button>
@@ -37,7 +36,6 @@
         document.getElementById('showInterfaceButton').checked = !!c.showInterfaceButton;
         document.getElementById('showReferenceButton').checked = !!c.showReferenceButton;
         document.getElementById('showLabelsButton').checked = !!c.showLabelsButton;
-        document.getElementById('showWasteButton').checked = !!c.showWasteButton;
         document.getElementById('showPprButtons').checked = !!c.showPprButtons;
         document.getElementById('showViewRevisionsBtn').checked = !!c.showViewRevisionsBtn;
       }).getConfig();
@@ -50,7 +48,6 @@
         showInterfaceButton: document.getElementById('showInterfaceButton').checked,
         showReferenceButton: document.getElementById('showReferenceButton').checked,
         showLabelsButton: document.getElementById('showLabelsButton').checked,
-        showWasteButton: document.getElementById('showWasteButton').checked,
         showPprButtons: document.getElementById('showPprButtons').checked,
         showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
       };
