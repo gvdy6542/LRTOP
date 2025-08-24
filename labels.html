@@ -597,7 +597,7 @@
               }
             })
             .withFailureHandler(err => alert('Грешка при сканиране: ' + (err && err.message ? err.message : err)))
-            .fetchProductByBarcode(code);
+            .lookupItem(code);
         }
       });
     }

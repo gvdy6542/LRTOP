@@ -894,21 +894,36 @@ document.addEventListener('click', e => {
       if (barcode.startsWith('28')) {
         const code = barcode.substring(0,7).replace(/^28/,'3');
         const qty  = parseInt(barcode.substring(7,12),10)/1000;
-        google.script.run.withSuccessHandler(item => {
-          if (item) updateItemDetails(item.code,item.name,barcode,qty);
-          else {
-            const alt = '4'+code.substring(1);
-            google.script.run.withSuccessHandler(item2 => {
-              if (item2) updateItemDetails(item2.code,item2.name,barcode,qty);
-              else document.getElementById('outputMessage').textContent = 'Не намерен!';
-            }).getItemFromCache(alt);
-          }
-        }).getItemFromCache(code);
+        google.script.run
+          .withSuccessHandler(item => {
+            if (item) updateItemDetails(item.code,item.name,barcode,qty);
+            else {
+              const alt = '4'+code.substring(1);
+              google.script.run
+                .withSuccessHandler(item2 => {
+                  if (item2) updateItemDetails(item2.code,item2.name,barcode,qty);
+                  else document.getElementById('outputMessage').textContent = 'Не намерен!';
+                })
+                .withFailureHandler(() => {
+                  document.getElementById('outputMessage').textContent = 'Грешка при търсене!';
+                })
+                .lookupItem(alt);
+            }
+          })
+          .withFailureHandler(() => {
+            document.getElementById('outputMessage').textContent = 'Грешка при търсене!';
+          })
+          .lookupItem(code);
       } else {
-        google.script.run.withSuccessHandler(item => {
-          if (item) updateItemDetails(item.code,item.name,barcode,null);
-          else document.getElementById('outputMessage').textContent = 'Не намерен!';
-        }).getItemFromCache(barcode);
+        google.script.run
+          .withSuccessHandler(item => {
+            if (item) updateItemDetails(item.code,item.name,barcode,null);
+            else document.getElementById('outputMessage').textContent = 'Не намерен!';
+          })
+          .withFailureHandler(() => {
+            document.getElementById('outputMessage').textContent = 'Грешка при търсене!';
+          })
+          .lookupItem(barcode);
       }
     }
 
