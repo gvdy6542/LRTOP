@@ -3,7 +3,23 @@ const EUR_RATE   = 1.95583;                                           // кур�
 
 var processedFilesList = [];
 
+// Конфигурация по подразбиране
+const DEFAULT_CONFIG = {
+  parentFolderId: '1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG',
+  revisionParentFolderId: '1Yo8oVkgYYmSR5z_cUFR7zdiRFJZkH3n5',
+  pprFolderId: '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l',
+  showInterfaceButton: true,
+  showReferenceButton: true,
+  showLabelsButton: true,
+  showWasteButton: true,
+  showPprButtons: true,
+  showViewRevisionsBtn: true,
+  adminEmails: ''
+};
+
 function doGet() {
+  // Инициализира конфигурацията при първо зареждане
+  getConfig();
   return HtmlService.createHtmlOutputFromFile('index');
 }
 
@@ -21,8 +37,20 @@ function loadLabelsPage() {
 
 function getConfig() {
   const props = PropertiesService.getScriptProperties();
-  const data = props.getProperty("config");
-  return data ? JSON.parse(data) : {};
+  const data = props.getProperty('config');
+  if (!data) {
+    // seed script properties with defaults
+    props.setProperty('config', JSON.stringify(DEFAULT_CONFIG));
+    return Object.assign({}, DEFAULT_CONFIG);
+  }
+  let cfg = {};
+  try {
+    cfg = JSON.parse(data);
+  } catch (e) {
+    cfg = {};
+  }
+  // ensure all defaults are present
+  return Object.assign({}, DEFAULT_CONFIG, cfg);
 }
 
 function saveConfig(config) {
