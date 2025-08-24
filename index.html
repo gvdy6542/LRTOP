@@ -10,7 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Сканиране на баркод</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="common.js"></script>
+  <script><?= HtmlService.createHtmlOutputFromFile('common').getContent(); ?></script>
 
   <style>
   /* Скриваме всички елементи, които са със role="progressbar" (това е spinner-а на HTMLService) */
