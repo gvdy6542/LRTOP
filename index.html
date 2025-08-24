@@ -1548,18 +1548,22 @@ function submitPprEdits(){
 
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  google.script.run.withSuccessHandler(cfg => {
-    window.appConfig = cfg || {};
-    document.getElementById('interfaceButton').style.display = cfg.showInterfaceButton ? 'inline-block' : 'none';
-    document.getElementById('referenceButton').style.display = cfg.showReferenceButton ? 'inline-block' : 'none';
-    document.getElementById('viewRevisionsBtn').style.display = cfg.showViewRevisionsBtn ? 'inline-block' : 'none';
-    document.getElementById('pprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
-    document.getElementById('checkPprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
-    document.getElementById('wasteBtn').style.display = cfg.showWasteButton ? 'inline-block' : 'none';
-    document.getElementById('labelsBtn').style.display = cfg.showLabelsButton ? 'inline-block' : 'none';
-  }).getConfig();
-});
+function applyConfig(cfg){
+  window.appConfig = cfg || {};
+  document.getElementById('interfaceButton').style.display = cfg.showInterfaceButton ? 'inline-block' : 'none';
+  document.getElementById('referenceButton').style.display = cfg.showReferenceButton ? 'inline-block' : 'none';
+  document.getElementById('viewRevisionsBtn').style.display = cfg.showViewRevisionsBtn ? 'inline-block' : 'none';
+  document.getElementById('pprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
+  document.getElementById('checkPprBtn').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
+  document.getElementById('wasteBtn').style.display = cfg.showWasteButton ? 'inline-block' : 'none';
+  document.getElementById('labelsBtn').style.display = cfg.showLabelsButton ? 'inline-block' : 'none';
+}
+
+function refreshConfig(){
+  google.script.run.withSuccessHandler(applyConfig).getConfig();
+}
+
+document.addEventListener('DOMContentLoaded', refreshConfig);
 </script>
 <script>
 document.getElementById('loginBtn').addEventListener('click', () => {
