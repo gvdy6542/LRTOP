@@ -43,9 +43,10 @@ function getConfig() {
   }
   var cfg = {};
   var data = sheet.getDataRange().getValues();
+  const normalize = v => typeof v === 'string' ? v.trim() : v;
   for (var i = 1; i < data.length; i++) {
-    var key = data[i][0];
-    var value = data[i][1];
+    var key = normalize(data[i][0]);
+    var value = normalize(data[i][1]);
     if (key === '') continue;
     cfg[key] = value;
   }
