@@ -5,14 +5,14 @@ var processedFilesList = [];
 
 // Конфигурация по подразбиране
 const DEFAULT_CONFIG = {
-  parentFolderId: '1PqVTfIpJKQRuxUcxwHVubfNOsvRTWzXG',
-  revisionParentFolderId: '1Yo8oVkgYYmSR5z_cUFR7zdiRFJZkH3n5',
-  pprFolderId: '1avn7paZvq3eHMdIMcH_PBF3sWA2tNM8l',
-  showInterfaceButton: true,
-  showReferenceButton: true,
-  showLabelsButton: true,
-  showPprButtons: true,
-  showViewRevisionsBtn: true,
+  parentFolderId: '',
+  revisionParentFolderId: '',
+  pprFolderId: '',
+  showInterfaceButton: false,
+  showReferenceButton: false,
+  showLabelsButton: false,
+  showPprButtons: false,
+  showViewRevisionsBtn: false,
   adminEmails: ''
 };
 
@@ -36,20 +36,21 @@ function loadLabelsPage() {
 
 function getConfig() {
   const props = PropertiesService.getScriptProperties();
-  const data = props.getProperty('config');
-  if (!data) {
-    // seed script properties with defaults
-    props.setProperty('config', JSON.stringify(DEFAULT_CONFIG));
-    return Object.assign({}, DEFAULT_CONFIG);
-  }
   let cfg = {};
   try {
-    cfg = JSON.parse(data);
-  } catch (e) {
-    cfg = {};
-  }
-  // ensure all defaults are present
-  return Object.assign({}, DEFAULT_CONFIG, cfg);
+    cfg = JSON.parse(props.getProperty('config') || '{}');
+  } catch (e) {}
+  return {
+    parentFolderId: cfg.parentFolderId || DEFAULT_CONFIG.parentFolderId,
+    revisionParentFolderId: cfg.revisionParentFolderId || DEFAULT_CONFIG.revisionParentFolderId,
+    pprFolderId: cfg.pprFolderId || DEFAULT_CONFIG.pprFolderId,
+    showInterfaceButton: typeof cfg.showInterfaceButton === 'boolean' ? cfg.showInterfaceButton : DEFAULT_CONFIG.showInterfaceButton,
+    showReferenceButton: typeof cfg.showReferenceButton === 'boolean' ? cfg.showReferenceButton : DEFAULT_CONFIG.showReferenceButton,
+    showLabelsButton: typeof cfg.showLabelsButton === 'boolean' ? cfg.showLabelsButton : DEFAULT_CONFIG.showLabelsButton,
+    showPprButtons: typeof cfg.showPprButtons === 'boolean' ? cfg.showPprButtons : DEFAULT_CONFIG.showPprButtons,
+    showViewRevisionsBtn: typeof cfg.showViewRevisionsBtn === 'boolean' ? cfg.showViewRevisionsBtn : DEFAULT_CONFIG.showViewRevisionsBtn,
+    adminEmails: cfg.adminEmails || DEFAULT_CONFIG.adminEmails
+  };
 }
 
 function saveConfig(config) {

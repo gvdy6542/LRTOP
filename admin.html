@@ -29,15 +29,14 @@
   <script>
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
-        if(!c) return;
-        document.getElementById('parentFolderId').value = c.parentFolderId || '';
-        document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId || '';
-        document.getElementById('pprFolderId').value = c.pprFolderId || '';
-        document.getElementById('showInterfaceButton').checked = !!c.showInterfaceButton;
-        document.getElementById('showReferenceButton').checked = !!c.showReferenceButton;
-        document.getElementById('showLabelsButton').checked = !!c.showLabelsButton;
-        document.getElementById('showPprButtons').checked = !!c.showPprButtons;
-        document.getElementById('showViewRevisionsBtn').checked = !!c.showViewRevisionsBtn;
+        document.getElementById('parentFolderId').value = c.parentFolderId;
+        document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId;
+        document.getElementById('pprFolderId').value = c.pprFolderId;
+        document.getElementById('showInterfaceButton').checked = c.showInterfaceButton;
+        document.getElementById('showReferenceButton').checked = c.showReferenceButton;
+        document.getElementById('showLabelsButton').checked = c.showLabelsButton;
+        document.getElementById('showPprButtons').checked = c.showPprButtons;
+        document.getElementById('showViewRevisionsBtn').checked = c.showViewRevisionsBtn;
       }).getConfig();
     }
     function saveConfig(){
@@ -51,10 +50,9 @@
         showPprButtons: document.getElementById('showPprButtons').checked,
         showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
       };
-      google.script.run.withSuccessHandler(() => {
-        window.opener.refreshConfig();
-        google.script.host.close();
-      }).saveConfig(c);
+      google.script.run
+        .withSuccessHandler(() => window.opener.refreshConfig())
+        .saveConfig(c);
     }
     document.addEventListener('DOMContentLoaded', loadConfig);
   </script>
