@@ -51,7 +51,10 @@
         showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
       };
       google.script.run
-        .withSuccessHandler(() => window.refreshConfig())
+        .withSuccessHandler(() => {
+          if (window.refreshConfig) window.refreshConfig();
+          loadConfig();
+        })
         .saveConfig(c);
     }
     document.addEventListener('DOMContentLoaded', loadConfig);
