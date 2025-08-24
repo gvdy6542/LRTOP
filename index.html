@@ -433,11 +433,21 @@
   transform: scale(1.2);
 }
 
+.login-bar { display:flex; gap:8px; justify-content:flex-end; padding:8px; background:#eef; }
+.login-bar input { padding:4px 8px; }
+.error-msg { color:red; font-size:0.9rem; margin-left:8px; }
+
 </style>
 
 </head>
 
 <body>
+  <div id="loginBar" class="login-bar">
+    <input id="username" type="text" placeholder="Потребител">
+    <input id="password" type="password" placeholder="Парола">
+    <button id="loginBtn">Влез</button>
+    <span id="loginError" class="error-msg"></span>
+  </div>
   <div class="container">
     <header style="text-align: center;">
       <h1>Недко Недков - Овчарово ЕООД</h1>
@@ -1536,6 +1546,17 @@ function submitPprEdits(){
 }
 
 
+</script>
+<script>
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  google.script.run.withSuccessHandler(res => {
+    if(!res.success){ document.getElementById('loginError').textContent='Невалиден вход'; return; }
+    document.getElementById('loginBar').style.display='none';
+    document.getElementById('adminBtn').style.display='inline-block';
+  }).login(user, pass);
+});
 </script>
 </body>
 </html>
