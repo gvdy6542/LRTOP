@@ -69,9 +69,13 @@ function getItemFromCache(codeOrBarcode) {
 
   let item = data.byCode[key];
   if (item) {
-    return { code: key, name: item.name, barcode: item.barcode };
+    return { code: item.code, name: item.name, barcode: key };
   }
   item = data.byBarcode[key];
+  if (item) {
+    return { code: item.code, name: item.name, barcode: key };
+  }
+  item = data.byShortCode ? data.byShortCode[key] : null;
   if (item) {
     return { code: item.code, name: item.name, barcode: key };
   }
