@@ -61,7 +61,8 @@ function getConfig() {
     cfg[key] = value;
   }
   var bool = function(val, def) {
-    return val === true || val === 'true' || val === 'TRUE' ? true : val === false || val === 'false' || val === 'FALSE' ? false : def;
+    const v = String(val).toLowerCase();
+    return v === 'true' ? true : v === 'false' ? false : def;
   };
   return {
     parentFolderId: cfg.parentFolderId || DEFAULT_CONFIG.parentFolderId,

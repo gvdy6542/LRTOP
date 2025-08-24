@@ -77,7 +77,7 @@
 
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
-        const toBool = v => v === true || String(v).toUpperCase() === 'TRUE';
+        const toBool = v => String(v).toLowerCase() === 'true';
         document.getElementById('parentFolderId').value = c.parentFolderId || '';
         document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId || '';
         document.getElementById('pprFolderId').value = c.pprFolderId || '';
