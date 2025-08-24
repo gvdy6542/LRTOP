@@ -12,12 +12,15 @@
   <h2>Админ конфигурация</h2>
   <label>Parent Folder ID:
     <input type="text" id="parentFolderId">
+    <a id="parentFolderIdLink" href="#" target="_blank" style="display:none">Линк</a>
   </label>
   <label>Revision Folder ID:
     <input type="text" id="revisionParentFolderId">
+    <a id="revisionParentFolderIdLink" href="#" target="_blank" style="display:none">Линк</a>
   </label>
   <label>PPR Folder ID:
     <input type="text" id="pprFolderId">
+    <a id="pprFolderIdLink" href="#" target="_blank" style="display:none">Линк</a>
   </label>
   <h3>Бутони</h3>
   <label><input type="checkbox" id="showInterfaceButton"> Показвай "Обработка"</label>
@@ -27,6 +30,19 @@
   <label><input type="checkbox" id="showViewRevisionsBtn"> Показвай "Преглед на ревизии"</label>
   <button onclick="saveConfig()">Запази</button>
   <script>
+    function updateFolderLinks(){
+      const ids = [
+        ['parentFolderId', 'parentFolderIdLink'],
+        ['revisionParentFolderId', 'revisionParentFolderIdLink'],
+        ['pprFolderId', 'pprFolderIdLink']
+      ];
+      ids.forEach(([inputId, linkId]) => {
+        const id = document.getElementById(inputId).value.trim();
+        const folderLink = document.getElementById(linkId);
+        folderLink.href = 'https://drive.google.com/drive/folders/' + id;
+        folderLink.style.display = id ? 'inline' : 'none';
+      });
+    }
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
         const toBool = v => v === true || String(v).toUpperCase() === 'TRUE';
@@ -38,6 +54,7 @@
         document.getElementById('showLabelsButton').checked = toBool(c.showLabelsButton);
         document.getElementById('showPprButtons').checked = toBool(c.showPprButtons);
         document.getElementById('showViewRevisionsBtn').checked = toBool(c.showViewRevisionsBtn);
+        updateFolderLinks();
       }).getConfig();
     }
     function saveConfig(){
@@ -54,11 +71,14 @@
       google.script.run
         .withSuccessHandler(() => {
           if (window.refreshConfig) window.refreshConfig();
-          loadConfig();
+          updateFolderLinks();
         })
         .saveConfig(c);
     }
-    document.addEventListener('DOMContentLoaded', loadConfig);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadConfig();
+      updateFolderLinks();
+    });
   </script>
 </body>
 </html>
