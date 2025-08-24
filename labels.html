@@ -408,11 +408,13 @@
     labels = [];
     rows.forEach(tr=>{
       const ce = tr.querySelectorAll('.ce');
+      const code = (ce[0]?.textContent || '').trim();
       const name = (ce[1]?.textContent || '').trim();
       const priceNum = normalizePrice((ce[2]?.textContent || '').trim());
-      if (!name || priceNum==null) return;
+      if (!code || !name || priceNum==null) return;
       const euro = roundEuro(priceNum / 1.95583);
       labels.push({
+        code,
         name,
         price: `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:1em;">${euro} €</div>`
       });
@@ -428,33 +430,24 @@
     const btn = document.getElementById('btnGenerate');
     if (btn) btn.disabled = true;
 
+    const codes = labels.map(l => l.barcode || l.code).filter(Boolean);
     google.script.run
-      .withSuccessHandler(labs => {
-        labels = Array.isArray(labs) ? labs.map(x=>{
-          const priceNum = normalizePrice(x.price);
-          const euro = priceNum!=null ? roundEuro(priceNum / 1.95583) : null;
-          return {
-            name: x.name || '',
-            price: priceNum!=null
-              ? `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:0.85em;">${euro} €</div>`
-              : ''
-          };
-        }) : [];
-        render();
+      .withSuccessHandler(url => {
         if (btn) btn.disabled = false;
-        const p = document.getElementById('btnPrint');
-        if (p) p.disabled = labels.length === 0;
+        if (url) window.open(url, '_blank');
       })
       .withFailureHandler(err => {
         alert('Грешка при генериране: ' + (err && err.message ? err.message : err));
         if (btn) btn.disabled = false;
       })
-      .runGenerateLabels();
+      .runGenerateLabels(codes);
   }
 
   /* Ръчно добавяне от полетата (без баркод визуализация) */
   function addCustom(){
-    const code = (document.getElementById('customCode')?.value || '').trim();
+    const codeEl = document.getElementById('customCode');
+    const code = (codeEl?.value || '').trim();
+    const barcode = codeEl?.dataset.barcode || code;
     const name = (document.getElementById('customName')?.value || '').trim();
     const priceStr = (document.getElementById('customPrice')?.value || '').trim();
     const priceNum = normalizePrice(priceStr);
@@ -463,6 +456,8 @@
 
     const euro = roundEuro(priceNum / 1.95583);
     labels.unshift({
+      code,
+      barcode,
       name,
       price: `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:0.85em;">${euro} €</div>`
     });
@@ -593,7 +588,9 @@
               if (!data) {
                 alert('Артикулът не е намерен!');
               } else {
-                document.getElementById('customCode').value  = data.code || code;
+                const codeEl = document.getElementById('customCode');
+                codeEl.value  = data.code || code;
+                codeEl.dataset.barcode = code;
                 document.getElementById('customName').value  = data.name || '';
                 document.getElementById('customPrice').value = (data.price != null ? String(data.price).replace('.', ',') : '');
                 addCustom();

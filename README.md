@@ -54,7 +54,7 @@ LRTOP е уеб приложение изградено с **Google Apps Script*
 ```html
 <button class="action-btn red" id="btnGenerate" onclick="generate()">Стартирай</button>
 ```
-Функцията `generate()` извиква `runGenerateLabels()` от `Code.js`, която създава лист "Етикети" в Google Sheets и връща данните за визуализация.
+Функцията `generate()` извиква `runGenerateLabels(codes)` от `Code.js`, която създава лист "Етикети" в Google Sheets и връща URL към него.
 
 ### Обработка на файлове – `reference.html`
 Тази страница дава възможност за обработка и качване на файлове. При натискане на бутона „Старт обработка“ се изпълнява `processFilesWithProgress()`:
@@ -74,7 +74,7 @@ LRTOP е уеб приложение изградено с **Google Apps Script*
 - `loadReferencePage()`, `loadinterfacePage()`, `loadLabelsPage()` – зареждат съответните HTML страници в нов прозорец.
 - `processBarcode(barcode)` – търси артикул по баркод и връща данни за него.
 - `listRevisions(storeName)` и `getRevisionData(fileId)` – работят с Google Drive за списък и визуализация на ревизии.
-- `runGenerateLabels()` и `generateLabelsSheet()` – генерират етикети в Google Sheets.
+- `runGenerateLabels(codes)` и `generateLabelsSheet(items)` – генерират етикети в Google Sheets.
 - `savePPRData(...)` – създава PPR документ на база въведените редове и изпраща имейл с прикачен файл.
 
 Кодът показва пример за зареждане на меню в странична лента:

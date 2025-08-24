@@ -147,12 +147,19 @@
   });
 
   function generate() {
-    document.getElementById('btn').disabled = true;
-    google.script.run.withSuccessHandler(labs => {
-      labels = labs;
-      render();
-      document.getElementById('btn').disabled = false;
-    }).runGenerateLabels();
+    const btn = document.getElementById('btn');
+    if (btn) btn.disabled = true;
+    const codes = labels.map(l => l.barcode || l.code).filter(Boolean);
+    google.script.run
+      .withSuccessHandler(url => {
+        if (btn) btn.disabled = false;
+        if (url) window.open(url, '_blank');
+      })
+      .withFailureHandler(err => {
+        alert('Грешка при генериране: ' + (err && err.message ? err.message : err));
+        if (btn) btn.disabled = false;
+      })
+      .runGenerateLabels(codes);
   }
 
   function addCustom() {
@@ -168,6 +175,8 @@
     const url = 'https://bwipjs-api.metafloor.com/?bcid=code128&text=' + encodeURIComponent(code) + '&includetext';
 
     labels.unshift({
+      code: code,
+      barcode: code,
       name: name,
       price: priceNum.toFixed(2) + ' лв.   ' + euro + ' €',
       barcodeUrl: url
