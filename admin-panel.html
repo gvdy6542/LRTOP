@@ -6,43 +6,83 @@
     body{font-family:Arial, sans-serif;margin:20px;}
     label{display:block;margin-bottom:6px;}
     input[type="text"]{width:100%;max-width:400px;}
+    .row{margin-bottom:10px;}
+    a.link{margin-left:6px}
   </style>
 </head>
 <body>
   <h2>Админ конфигурация</h2>
-  <label>Parent Folder ID:
-    <input type="text" id="parentFolderId">
-  </label>
-  <label>Revision Folder ID:
-    <input type="text" id="revisionParentFolderId">
-  </label>
-  <label>PPR Folder ID:
-    <input type="text" id="pprFolderId">
-  </label>
+
+  <div class="row">
+    <label>Parent Folder ID:
+      <input type="text" id="parentFolderId">
+      <a id="parentFolderIdLink" class="link" href="#" target="_blank" style="display:none">Линк</a>
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Revision Folder ID:
+      <input type="text" id="revisionParentFolderId">
+      <a id="revisionParentFolderIdLink" class="link" href="#" target="_blank" style="display:none">Линк</a>
+    </label>
+  </div>
+
+  <div class="row">
+    <label>PPR Folder ID:
+      <input type="text" id="pprFolderId">
+      <a id="pprFolderIdLink" class="link" href="#" target="_blank" style="display:none">Линк</a>
+    </label>
+  </div>
+
   <h3>Бутони</h3>
   <label><input type="checkbox" id="showInterfaceButton"> Показвай "Обработка"</label>
   <label><input type="checkbox" id="showReferenceButton"> Показвай "ИНВЕНТАРИЗАЦИЯ"</label>
   <label><input type="checkbox" id="showLabelsButton"> Показвай "Етикети"</label>
   <label><input type="checkbox" id="showPprButtons"> Показвай бутоните за ППР</label>
   <label><input type="checkbox" id="showViewRevisionsBtn"> Показвай "Преглед на ревизии"</label>
-  <button onclick="saveConfig()">Запази</button>
-  <button onclick="refreshAllClients()">Обнови всички клиенти</button>
+
+  <div class="row" style="margin-top:12px">
+    <button id="btnSave">Запази</button>
+    <button id="btnRefreshAll">Обнови всички клиенти</button>
+  </div>
+
   <script>
+    function updateFolderLinks(){
+      const pairs = [
+        ['parentFolderId','parentFolderIdLink'],
+        ['revisionParentFolderId','revisionParentFolderIdLink'],
+        ['pprFolderId','pprFolderIdLink']
+      ];
+      pairs.forEach(([inputId, linkId]) => {
+        const val = document.getElementById(inputId).value.trim();
+        const a = document.getElementById(linkId);
+        if (val) {
+          a.href = 'https://drive.google.com/drive/folders/' + encodeURIComponent(val);
+          a.style.display = 'inline';
+        } else {
+          a.removeAttribute('href');
+          a.style.display = 'none';
+        }
+      });
+    }
+
     function loadConfig(){
       google.script.run.withSuccessHandler(function(c){
         const toBool = v => v === true || String(v).toUpperCase() === 'TRUE';
-        document.getElementById('parentFolderId').value = c.parentFolderId;
-        document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId;
-        document.getElementById('pprFolderId').value = c.pprFolderId;
+        document.getElementById('parentFolderId').value = c.parentFolderId || '';
+        document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId || '';
+        document.getElementById('pprFolderId').value = c.pprFolderId || '';
         document.getElementById('showInterfaceButton').checked = toBool(c.showInterfaceButton);
         document.getElementById('showReferenceButton').checked = toBool(c.showReferenceButton);
         document.getElementById('showLabelsButton').checked = toBool(c.showLabelsButton);
         document.getElementById('showPprButtons').checked = toBool(c.showPprButtons);
         document.getElementById('showViewRevisionsBtn').checked = toBool(c.showViewRevisionsBtn);
+        updateFolderLinks();
       }).getConfig();
     }
+
     function saveConfig(){
-      var c = {
+      const c = {
         parentFolderId: document.getElementById('parentFolderId').value.trim(),
         revisionParentFolderId: document.getElementById('revisionParentFolderId').value.trim(),
         pprFolderId: document.getElementById('pprFolderId').value.trim(),
@@ -52,17 +92,28 @@
         showPprButtons: document.getElementById('showPprButtons').checked,
         showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
       };
-      google.script.run
-        .withSuccessHandler(() => {
-          if (window.refreshConfig) window.refreshConfig();
-          loadConfig();
-        })
-        .saveConfig(c);
+      google.script.run.withSuccessHandler(() => {
+        if (window.refreshConfig) window.refreshConfig();
+        updateFolderLinks();
+      }).saveConfig(c);
     }
+
     function refreshAllClients(){
       google.script.run.broadcastRefresh();
     }
-    document.addEventListener('DOMContentLoaded', loadConfig);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // wire events
+      ['parentFolderId','revisionParentFolderId','pprFolderId'].forEach(id=>{
+        document.getElementById(id).addEventListener('input', updateFolderLinks);
+      });
+      document.getElementById('btnSave').addEventListener('click', saveConfig);
+      document.getElementById('btnRefreshAll').addEventListener('click', refreshAllClients);
+
+      loadConfig();
+      updateFolderLinks();
+    });
   </script>
 </body>
 </html>
+
