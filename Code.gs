@@ -6,26 +6,33 @@ var processedFilesList = [];
 
 /**
  * Зарежда данните от „Лист1“ в кеш за бърз достъп.
- * @return {{byCode:Object,byBarcode:Object}}
+ * @return {{byCode:Object,byBarcode:Object,byShortCode:Object}}
  */
 function loadItemsCache() {
   const sheet = SpreadsheetApp.openById(MAIN_SS_ID)
                                .getSheetByName('Лист1');
-  if (!sheet) return { byCode: {}, byBarcode: {} };
+  if (!sheet) return { byCode: {}, byBarcode: {}, byShortCode: {} };
 
-  const rows = sheet.getRange('A:C').getValues();
+  const rows = sheet.getRange('A:H').getValues();
   const byCode = {};
   const byBarcode = {};
+  const byShortCode = {};
 
   rows.forEach(r => {
     const code = String(r[0]).trim();
-    const name = String(r[1]).trim();
-    const barcode = String(r[2]).trim();
+    const name = String(r[2]).trim();
+    const barcode = String(r[6]).trim();
+    const shortCodes = String(r[7]).trim();
     if (code) byCode[code] = { code, name, barcode };
     if (barcode) byBarcode[barcode] = { code, name, barcode };
+    if (shortCodes) {
+      shortCodes.split(/[\s,]+/).filter(Boolean).forEach(sc => {
+        byShortCode[sc] = { code, name, barcode };
+      });
+    }
   });
 
-  const data = { byCode: byCode, byBarcode: byBarcode };
+  const data = { byCode: byCode, byBarcode: byBarcode, byShortCode: byShortCode };
 
   const cache = CacheService.getScriptCache();
   const raw = JSON.stringify(data);
@@ -43,7 +50,7 @@ function loadItemsCache() {
 }
 
 /**
- * Взема артикул от кеша по код или баркод.
+ * Взема артикул от кеша по код, баркод или кратък код.
  * @param {string|number} codeOrBarcode
  * @return {{code:string,name:string,barcode?:string}|null}
  */
@@ -74,6 +81,10 @@ function getItemFromCache(codeOrBarcode) {
   item = data.byBarcode[key];
   if (item) {
     return { code: item.code, name: item.name, barcode: key };
+  }
+  item = data.byShortCode[key];
+  if (item) {
+    return { code: item.code, name: item.name, barcode: item.barcode };
   }
   return null;
 }
