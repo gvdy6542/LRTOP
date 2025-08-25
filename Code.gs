@@ -502,7 +502,7 @@ function parseBarcodeSmart(bc) {
   if (/^\d{6}$/.test(raw)) {
     const item = findByCode(raw);
     return item
-      ? { code: item.code, name: item.name, barcode: item.barcode || raw, qty: 1 }
+      ? { code: item.code, name: item.name, barcode: item.barcode || raw, qty: null }
       : { error: 'Артикулът не е намерен.' };
   }
   if (/^28\d{10,}/.test(raw)) {
@@ -521,7 +521,7 @@ function parseBarcodeSmart(bc) {
   if (/^\d{8,13}$/.test(raw)) {
     const item = findByBarcode(raw);
     return item
-      ? { code: item.code, name: item.name, barcode: raw, qty: 1 }
+      ? { code: item.code, name: item.name, barcode: raw, qty: null }
       : { error: 'Артикулът не е намерен.' };
   }
   return { error: 'Невалиден баркод.' };
