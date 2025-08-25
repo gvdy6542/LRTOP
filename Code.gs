@@ -430,7 +430,9 @@ function getRefreshTimestamp() {
 
 function parseBarcodeSmart(bc) {
   const raw = String(bc).trim();
-  if (['*0000', '*0001', '*0002'].includes(raw)) {
+  // Allow special command barcodes to pass through unparsed so the UI can
+  // handle them separately.
+  if (/^\*000[0-2]$/.test(raw)) {
     return { code: raw };
   }
   if (raw.length > 20) {
