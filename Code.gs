@@ -7,6 +7,8 @@ const ITEMS_SHEET_NAME = 'Лист1';
 const ITEMS_CACHE_KEY = 'itemsIndex';
 const ITEMS_CACHE_TTL = 300; // seconds
 const INDEX_FILE_NAME = 'itemsIndex.json';
+const ITEMS_CACHE_PARTS_KEY = ITEMS_CACHE_KEY + '_parts';
+const ITEMS_CACHE_LIMIT = 100 * 1024; // 100 KB per cache entry
 
 var processedFilesList = [];
 
@@ -80,22 +82,86 @@ function loadIndexFromFile_() {
 }
 
 /**
+ * Removes all cached items index fragments.
+ * @param {Cache} cache
+ */
+function clearItemsIndexCache_(cache) {
+  cache.remove(ITEMS_CACHE_KEY);
+  const partsStr = cache.get(ITEMS_CACHE_PARTS_KEY);
+  if (partsStr) {
+    const parts = parseInt(partsStr, 10);
+    for (let i = 0; i < parts; i++) {
+      cache.remove(ITEMS_CACHE_KEY + '_' + i);
+    }
+    cache.remove(ITEMS_CACHE_PARTS_KEY);
+  }
+}
+
+/**
+ * Saves the items index into cache, splitting into chunks if necessary.
+ * @param {Cache} cache
+ * @param {{byCode:Object,byBarcode:Object}} index
+ */
+function saveItemsIndexToCache_(cache, index) {
+  clearItemsIndexCache_(cache);
+  const raw = JSON.stringify(index);
+  if (raw.length <= ITEMS_CACHE_LIMIT) {
+    cache.put(ITEMS_CACHE_KEY, raw, ITEMS_CACHE_TTL);
+  } else {
+    const parts = Math.ceil(raw.length / ITEMS_CACHE_LIMIT);
+    cache.put(ITEMS_CACHE_PARTS_KEY, String(parts), ITEMS_CACHE_TTL);
+    for (let i = 0; i < parts; i++) {
+      cache.put(
+        ITEMS_CACHE_KEY + '_' + i,
+        raw.slice(i * ITEMS_CACHE_LIMIT, (i + 1) * ITEMS_CACHE_LIMIT),
+        ITEMS_CACHE_TTL
+      );
+    }
+  }
+}
+
+/**
+ * Attempts to load items index from cache, reassembling chunks if needed.
+ * @param {Cache} cache
+ * @return {{byCode:Object,byBarcode:Object}|null}
+ */
+function loadItemsIndexFromCache_(cache) {
+  let raw = cache.get(ITEMS_CACHE_KEY);
+  if (!raw) {
+    const partsStr = cache.get(ITEMS_CACHE_PARTS_KEY);
+    if (partsStr) {
+      const parts = parseInt(partsStr, 10);
+      const chunks = [];
+      for (let i = 0; i < parts; i++) {
+        const chunk = cache.get(ITEMS_CACHE_KEY + '_' + i);
+        if (chunk) chunks.push(chunk);
+      }
+      if (chunks.length === parts) {
+        raw = chunks.join('');
+      }
+    }
+  }
+  if (raw) {
+    try { return JSON.parse(raw); } catch (e) {}
+  }
+  return null;
+}
+
+/**
  * Retrieves items index from cache, Drive or rebuilds if missing.
  * @return {{byCode:Object,byBarcode:Object}}
  */
 function getItemsIndex_() {
   const cache = CacheService.getScriptCache();
-  const cached = cache.get(ITEMS_CACHE_KEY);
-  if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
-  }
+  let index = loadItemsIndexFromCache_(cache);
+  if (index) return index;
 
-  let index = loadIndexFromFile_();
+  index = loadIndexFromFile_();
   if (!index) {
     index = buildItemsIndex_();
     saveIndexToFile_(index);
   }
-  cache.put(ITEMS_CACHE_KEY, JSON.stringify(index), ITEMS_CACHE_TTL);
+  saveItemsIndexToCache_(cache, index);
   return index;
 }
 
@@ -130,10 +196,8 @@ function refreshItemsCache() {
   // Persist the freshly built index
   saveIndexToFile_(index);
 
-  // Replace the cached value with the new index
   const cache = CacheService.getScriptCache();
-  cache.remove(ITEMS_CACHE_KEY);
-  cache.put(ITEMS_CACHE_KEY, JSON.stringify(index), ITEMS_CACHE_TTL);
+  saveItemsIndexToCache_(cache, index);
 
   return index;
 }
