@@ -55,6 +55,15 @@
     <tbody></tbody>
   </table>
 
+  <h3>Кеш</h3>
+  <button id="btnReloadCache">Обнови кеша</button>
+  <table id="cacheTable" border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr><th>Ключ</th><th>Стойност</th><th></th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <script><?!= include('common'); ?></script>
   <script>
     function updateFolderLinks(){
@@ -124,6 +133,29 @@
       }).getClientStats();
     }
 
+    function loadCacheEntries(){
+      google.script.run
+        .withSuccessHandler(entries => {
+          const tbody = document.querySelector('#cacheTable tbody');
+          tbody.innerHTML = '';
+          entries.forEach(e => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${e.key}</td><td><input type="text" value="${e.value}"></td><td><button>Запази</button></td>`;
+            const btn = tr.querySelector('button');
+            btn.addEventListener('click', () => {
+              const val = tr.querySelector('input').value;
+              google.script.run
+                .withSuccessHandler(loadCacheEntries)
+                .withFailureHandler(err => alert('Неуспешен запис: ' + err.message))
+                .updateCacheEntry(e.key, val);
+            });
+            tbody.appendChild(tr);
+          });
+        })
+        .withFailureHandler(err => alert('Грешка при зареждане на кеша: ' + err.message))
+        .listCacheEntries();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       // wire events
       ['parentFolderId','revisionParentFolderId','pprFolderId'].forEach(id=>{
@@ -148,10 +180,12 @@
           .refreshItemsCache();
         sendActivity('refresh_items_cache');
       });
+      document.getElementById('btnReloadCache').addEventListener('click', loadCacheEntries);
 
       loadConfig();
       updateFolderLinks();
       loadClientStats();
+      loadCacheEntries();
       setInterval(loadClientStats, 1000);
       sendActivity('admin_loaded');
     });
