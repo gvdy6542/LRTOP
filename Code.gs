@@ -317,6 +317,37 @@ function loadItemsCache() {
 }
 
 /**
+ * Връща всички артикули от кеша като масив.
+ * @return {Array<{code:string,name:string,barcode:string,shortCode:string,price:(number|null)}>} 
+ */
+function getAllCachedItems() {
+  const cache = CacheService.getScriptCache();
+  let raw = cache.get('itemsCache');
+  if (!raw) {
+    const partsStr = cache.get('itemsCache_parts');
+    if (partsStr) {
+      const parts = parseInt(partsStr, 10);
+      const chunks = [];
+      for (let i = 0; i < parts; i++) {
+        const chunk = cache.get('itemsCache_' + i);
+        if (chunk) chunks.push(chunk);
+      }
+      if (chunks.length === parts) {
+        raw = chunks.join('');
+      }
+    }
+  }
+  const data = raw ? JSON.parse(raw) : loadItemsCache();
+  return Object.values(data.byCode).map(item => ({
+    code: item.code,
+    name: item.name,
+    barcode: item.barcode,
+    shortCode: item.shortCode,
+    price: item.price
+  }));
+}
+
+/**
  * Взема артикул от кеша по код, баркод или кратък код.
  * @param {string|number} codeOrBarcode
  * @return {{code:string,name:string,barcode?:string,shortCode?:string,price:(number|null)}|null}
