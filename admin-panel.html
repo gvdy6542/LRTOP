@@ -138,9 +138,14 @@
         sendActivity('refresh_clients');
       });
       document.getElementById('btnRefreshItems').addEventListener('click', () => {
-        google.script.run.withSuccessHandler(() => {
-          alert('Кешът на артикулите е обновен.');
-        }).refreshItemsCache();
+        google.script.run
+          .withSuccessHandler(res => {
+            const msg = res && res.ok
+              ? `Кешът на артикулите е обновен (общо ${res.count}).`
+              : 'Възникна грешка при обновяване на кеша.';
+            alert(msg);
+          })
+          .refreshItemsCache();
         sendActivity('refresh_items_cache');
       });
 

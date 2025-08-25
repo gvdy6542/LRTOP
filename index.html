@@ -1614,7 +1614,13 @@ function submitPprEdits(){
 
 function refreshCache(){
   google.script.run
-    .withSuccessHandler(() => alert('Кешът беше обновен успешно!'))
+    .withSuccessHandler(res => {
+      if (res && res.ok) {
+        alert('Кешът беше обновен успешно! (' + res.count + ' артикула)');
+      } else {
+        alert('Възникна грешка при обновяване на кеша.');
+      }
+    })
     .withFailureHandler(err => alert('Грешка при обновяване на кеша: ' + err.message))
     .refreshItemsCache();
 }
