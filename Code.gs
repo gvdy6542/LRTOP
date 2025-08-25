@@ -1006,6 +1006,23 @@ function findItemNumberByBarcode(barcode) {
 }
 
 /**
+ * Searches for an item name by code in column F of 'Лист1'.
+ * @param {string|number} itemCode
+ * @return {?string}
+ */
+function findItemNameByCodeInColumnF(itemCode) {
+  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Лист1');
+  if (!sh) return null;
+  const rng = sh.getDataRange().getValues();
+  for (let i = 0; i < rng.length; i++) {
+    if (String(rng[i][5]) === String(itemCode)) { // column F
+      return String(rng[i][1] || '').trim() || null; // column B has the name
+    }
+  }
+  return null;
+}
+
+/**
  * Връща баркода от колона C за даден артикулен код (A)
  */
 function getBarcodeByCode(itemCode) {
