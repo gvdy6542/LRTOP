@@ -422,6 +422,42 @@ function getRefreshTimestamp() {
   return props.getProperty('refreshTimestamp') || '';
 }
 
+function parseBarcodeSmart(bc) {
+  const raw = String(bc).trim();
+  if (['*0000', '*0001', '*0002'].includes(raw)) {
+    return { code: raw };
+  }
+  if (raw.length > 20) {
+    return { error: 'Невалиден баркод.' };
+  }
+  if (/^\d{6}$/.test(raw)) {
+    const item = findByCode(raw);
+    return item
+      ? { code: item.code, name: item.name, barcode: item.barcode || raw, qty: 1 }
+      : { error: 'Артикулът не е намерен.' };
+  }
+  if (/^28\d{10,}/.test(raw)) {
+    const itemCode = raw.substring(2, 7);
+    const grams = raw.substring(7, 12);
+    const qty = grams ? parseInt(grams, 10) / 1000 : 0;
+    const codeE = '3' + itemCode;
+    let item = findByCode(codeE);
+    if (!item) {
+      item = findByCode('4' + codeE.substring(1));
+    }
+    return item
+      ? { code: item.code, name: item.name, barcode: raw, qty: qty }
+      : { error: 'Артикулът не е намерен.' };
+  }
+  if (/^\d{8,13}$/.test(raw)) {
+    const item = findByBarcode(raw);
+    return item
+      ? { code: item.code, name: item.name, barcode: raw, qty: 1 }
+      : { error: 'Артикулът не е намерен.' };
+  }
+  return { error: 'Невалиден баркод.' };
+}
+
 function processBarcode(barcode) {
   const bc = String(barcode).trim();
   const candidates = [bc];
