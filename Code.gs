@@ -757,17 +757,9 @@ function handleShortCode(code, sheet, cache) {
 
   let itemName = cache.get(code);
   if (!itemName) {
-    const listSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
-    const columnA = listSheet.getRange("A:A").getValues();
-    let rowIndex = -1;
-    for (let i = 0; i < columnA.length; i++) {
-      if (columnA[i][0] === code) {
-        rowIndex = i + 1;
-        break;
-      }
-    }
-    if (rowIndex !== -1) {
-      itemName = listSheet.getRange(rowIndex, 2).getValue();
+    const item = getItemFromCache(code);
+    if (item) {
+      itemName = item.name;
       cache.put(code, itemName, 1500);
     }
   }
@@ -969,13 +961,10 @@ function clearDescriptionSheet() {
     descriptionSheet.clear(); // Изчистване на цялата страница
   }
 }
-// Функция за извличане на данни от колона A на "Лист1"
+// Функция за извличане на всички артикули чрез кеша
 function getItemCodes() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Лист1");
-  const data = sheet.getRange("A:A").getValues();
-
-  // Връщаме само уникалните стойности от колоната
-  return data.filter(row => row[0]).map(row => row[0]);
+  const index = getItemsIndex_();
+  return Object.keys(index.byCode);
 }
 function updateItemDetails(itemCode, itemName, barcode, quantity) {
   document.getElementById("outputMessage").textContent = "Артикул: " + itemName;
@@ -1633,37 +1622,15 @@ function findItemDetailsByBarcode_MAIN(barcode) {
   }
   return null;
 }
-/* === цена по артикулен код от Лист1 === */
+/* === цена по артикулен код от кеша === */
 /**
- * Връща единична цена от „Лист1“
- * – кодът е в колона A (или C); цената – в колона F
- * – поддържа “92,00”, “92.00”, “92,50 лв.” и т.н.
+ * Връща единична цена от кешираните данни
  * @param {string|number} itemCode
  * @return {number|null}
  */
 function getPriceByCode(itemCode) {
-  const sheet = SpreadsheetApp.openById(MAIN_SS_ID)
-                              .getSheetByName('Лист1');
-  if (!sheet) return null;
-
-  const rows = sheet.getRange('A:F').getValues();   // A-код | F-цена
-  for (const r of rows) {
-    // съвпадение по код в A или C
-    const codeA = String(r[0]).trim();
-    const codeC = String(r[2]).trim();
-    if (codeA === String(itemCode) || codeC === String(itemCode)) {
-
-      // чистим цената – махаме букви/интервали, заменяме запетаи с точки
-      const raw = String(r[5])
-                    .replace(/[^0-9.,]/g, '')   // само цифри . ,
-                    .replace(',', '.')
-                    .trim();
-
-      const price = parseFloat(raw);
-      return isNaN(price) ? null : price;       // valid number → връщаме
-    }
-  }
-  return null;                                   // няма цена
+  const item = getItemFromCache(itemCode);
+  return item ? item.price : null;
 }
 
 function buildPPRCacheToSheet() {
