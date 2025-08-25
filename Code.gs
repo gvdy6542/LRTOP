@@ -189,17 +189,14 @@ function findByBarcode(barcode) {
 
 /**
  * Forces rebuilding of the items cache and persisting it to Drive.
- * @return {{byCode:Object,byBarcode:Object}}
+ * @return {{ok:boolean,count:number}}
  */
 function refreshItemsCache() {
   const index = buildItemsIndex_();
-  // Persist the freshly built index
   saveIndexToFile_(index);
-
   const cache = CacheService.getScriptCache();
   saveItemsIndexToCache_(cache, index);
-
-  return index;
+  return { ok: true, count: Object.keys(index.byCode || {}).length };
 }
 
 /**
