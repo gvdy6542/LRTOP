@@ -890,6 +890,20 @@ document.addEventListener('click', e => {
 
     // 6. Call GAS to find item
     function processBarcode(barcode) {
+      const bc = String(barcode).trim();
+      // route special command barcodes directly to their handlers
+      switch (bc) {
+        case '*0000':
+          openReference();
+          return;
+        case '*0001':
+          openinterface();
+          return;
+        case '*0002':
+          openLabels();
+          return;
+      }
+
       document.getElementById('outputMessage').textContent = 'Обработка...';
       google.script.run
         .withSuccessHandler(res => {
@@ -909,7 +923,7 @@ document.addEventListener('click', e => {
           const msg = err && err.message ? err.message : 'Грешка при търсене!';
           document.getElementById('outputMessage').textContent = msg;
         })
-        .parseBarcodeSmart(barcode);
+        .parseBarcodeSmart(bc);
     }
 
     // 7. Update UI
