@@ -895,35 +895,35 @@ document.addEventListener('click', e => {
         const code = barcode.substring(0,7).replace(/^28/,'3');
         const qty  = parseInt(barcode.substring(7,12),10)/1000;
         google.script.run
-          .withSuccessHandler(item => {
-            if (item) updateItemDetails(item.code,item.name,barcode,qty);
-            else {
-              const alt = '4'+code.substring(1);
-              google.script.run
-                .withSuccessHandler(item2 => {
-                  if (item2) updateItemDetails(item2.code,item2.name,barcode,qty);
+            .withSuccessHandler(item => {
+              if (item) updateItemDetails(item.code,item.name,item.barcode,qty);
+              else {
+                const alt = '4'+code.substring(1);
+                google.script.run
+                  .withSuccessHandler(item2 => {
+                    if (item2) updateItemDetails(item2.code,item2.name,item2.barcode,qty);
                   else document.getElementById('outputMessage').textContent = 'Не намерен!';
                 })
                 .withFailureHandler(() => {
                   document.getElementById('outputMessage').textContent = 'Грешка при търсене!';
                 })
-                .lookupItem(alt);
+                .processBarcode(alt);
             }
           })
           .withFailureHandler(() => {
             document.getElementById('outputMessage').textContent = 'Грешка при търсене!';
           })
-          .lookupItem(code);
+          .processBarcode(code);
       } else {
         google.script.run
           .withSuccessHandler(item => {
-            if (item) updateItemDetails(item.code,item.name,barcode,null);
+            if (item) updateItemDetails(item.code,item.name,item.barcode,null);
             else document.getElementById('outputMessage').textContent = 'Не намерен!';
           })
           .withFailureHandler(() => {
             document.getElementById('outputMessage').textContent = 'Грешка при търсене!';
           })
-          .lookupItem(barcode);
+          .processBarcode(barcode);
       }
     }
 
@@ -1415,16 +1415,14 @@ function handlePPRBarcode(e) {
     const code = candidates[i];
     google.script.run.withSuccessHandler(item => {
       if (item) {
-        google.script.run.withSuccessHandler(price => {
-          const qtyStr = prompt('Въведи количество за ' + item.name);
-          const qty    = parseFloat(qtyStr);
-          if (!qty || qty <= 0) return;
-          addToPPRTable(item.code, item.name, barcode, price, qty);
-        }).getPriceByCode(item.code);
+        const qtyStr = prompt('Въведи количество за ' + item.name);
+        const qty    = parseFloat(qtyStr);
+        if (!qty || qty <= 0) return;
+        addToPPRTable(item.code, item.name, item.barcode, item.price, qty);
       } else {
         tryLookup(i + 1);
       }
-    }).lookupItem(code);
+    }).processBarcode(code);
   };
 
   tryLookup(0);
