@@ -2,7 +2,135 @@ const MAIN_SS_ID   = '1x_f-IMzhYpUpuhV8jL-Ij6qyTIpOEqwWzJgSUrW9Ihk';   // цен
 const CONFIG_SS_ID = MAIN_SS_ID;                                      // конфигурационен Spreadsheet
 const EUR_RATE     = 1.95583;                                         // курс евро
 
+// Sheet and caching constants for items index
+const ITEMS_SHEET_NAME = 'Лист1';
+const ITEMS_CACHE_KEY = 'itemsIndex';
+const ITEMS_CACHE_TTL = 300; // seconds
+const INDEX_FILE_NAME = 'itemsIndex.json';
+
 var processedFilesList = [];
+
+/**
+ * Reads the items sheet and builds an index by code and barcode.
+ * Each entry keeps the original row number for quick reference.
+ * @return {{byCode:Object,byBarcode:Object}}
+ */
+function buildItemsIndex_() {
+  const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName(ITEMS_SHEET_NAME);
+  if (!sheet) return { byCode: {}, byBarcode: {} };
+
+  const rows = sheet.getDataRange().getValues();
+  const byCode = {};
+  const byBarcode = {};
+
+  rows.forEach((r, i) => {
+    const code = String(r[0]).trim();
+    const name = String(r[1]).trim();
+    const barcode = String(r[2]).trim();
+    if (!code && !barcode) return;
+
+    const rawPrice = String(r[5])
+      .replace(/[^0-9.,]/g, '')
+      .replace(',', '.')
+      .trim();
+    const price = parseFloat(rawPrice);
+
+    const item = {
+      code: code,
+      name: name,
+      barcode: barcode,
+      price: isNaN(price) ? null : price,
+      row: i + 1
+    };
+    if (code) byCode[code] = item;
+    if (barcode) byBarcode[barcode] = item;
+  });
+
+  return { byCode: byCode, byBarcode: byBarcode };
+}
+
+/**
+ * Persists the given index JSON in a Drive file.
+ * @param {{byCode:Object,byBarcode:Object}} index
+ */
+function saveIndexToFile_(index) {
+  const json = JSON.stringify(index);
+  const files = DriveApp.getFilesByName(INDEX_FILE_NAME);
+  if (files.hasNext()) {
+    const f = files.next();
+    f.setContent(json);
+  } else {
+    DriveApp.createFile(INDEX_FILE_NAME, json, MimeType.PLAIN_TEXT);
+  }
+}
+
+/**
+ * Loads items index JSON from Drive if present.
+ * @return {{byCode:Object,byBarcode:Object}|null}
+ */
+function loadIndexFromFile_() {
+  const files = DriveApp.getFilesByName(INDEX_FILE_NAME);
+  if (!files.hasNext()) return null;
+  const file = files.next();
+  try {
+    return JSON.parse(file.getBlob().getDataAsString());
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Retrieves items index from cache, Drive or rebuilds if missing.
+ * @return {{byCode:Object,byBarcode:Object}}
+ */
+function getItemsIndex_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(ITEMS_CACHE_KEY);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
+  }
+
+  let index = loadIndexFromFile_();
+  if (!index) {
+    index = buildItemsIndex_();
+    saveIndexToFile_(index);
+  }
+  cache.put(ITEMS_CACHE_KEY, JSON.stringify(index), ITEMS_CACHE_TTL);
+  return index;
+}
+
+/**
+ * Finds an item by its code.
+ * @param {string|number} code
+ * @return {?Object}
+ */
+function findByCode(code) {
+  const key = String(code).trim();
+  if (!key) return null;
+  return getItemsIndex_().byCode[key] || null;
+}
+
+/**
+ * Finds an item by its barcode.
+ * @param {string|number} barcode
+ * @return {?Object}
+ */
+function findByBarcode(barcode) {
+  const key = String(barcode).trim();
+  if (!key) return null;
+  return getItemsIndex_().byBarcode[key] || null;
+}
+
+/**
+ * Forces rebuilding of the items cache and persisting it to Drive.
+ * @return {{byCode:Object,byBarcode:Object}}
+ */
+function refreshItemsCache() {
+  const index = buildItemsIndex_();
+  saveIndexToFile_(index);
+  CacheService.getScriptCache().put(ITEMS_CACHE_KEY, JSON.stringify(index), ITEMS_CACHE_TTL);
+  return index;
+}
 
 /**
  * Зарежда данните от „Лист1“ в кеш за бърз достъп.
