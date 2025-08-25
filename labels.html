@@ -589,15 +589,15 @@
                 alert('Артикулът не е намерен!');
               } else {
                 const codeEl = document.getElementById('customCode');
-                codeEl.value  = data.code || code;
-                codeEl.dataset.barcode = code;
+                codeEl.value  = data.code;
+                codeEl.dataset.barcode = data.barcode;
                 document.getElementById('customName').value  = data.name || '';
                 document.getElementById('customPrice').value = (data.price != null ? String(data.price).replace('.', ',') : '');
                 addCustom();
               }
             })
             .withFailureHandler(err => alert('Грешка при сканиране: ' + (err && err.message ? err.message : err)))
-            .lookupItem(code);
+            .processBarcode(code);
         }
       });
     }
