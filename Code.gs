@@ -200,6 +200,46 @@ function refreshItemsCache() {
 }
 
 /**
+ * Reads all rows from sheet "Лист1", removes duplicates by article code
+ * and writes the unique rows into sheet "666".
+ * @return {{count:number}}
+ */
+function initializeItemsCache() {
+  const ss = SpreadsheetApp.openById(MAIN_SS_ID);
+  const source = ss.getSheetByName('Лист1');
+  if (!source) {
+    return { count: 0 };
+  }
+
+  const data = source.getDataRange().getValues();
+  const header = data.length ? data[0] : [];
+  const unique = new Map();
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const code = String(row[0]).trim();
+    if (!code || unique.has(code)) continue;
+    unique.set(code, row);
+  }
+
+  let target = ss.getSheetByName('666');
+  if (!target) {
+    target = ss.insertSheet('666');
+  } else {
+    target.clear();
+  }
+
+  const rows = Array.from(unique.values());
+  const output = header.length ? [header].concat(rows) : rows;
+  if (output.length) {
+    target.getRange(1, 1, output.length, output[0].length).setValues(output);
+  }
+
+  Logger.log('initializeItemsCache inserted %s records', rows.length);
+  return { count: rows.length };
+}
+
+/**
  * Lists known cache entries with their values.
  * @return {{key:string,value:string}[]}
  */

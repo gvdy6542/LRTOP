@@ -45,6 +45,7 @@
     <button id="btnSave">Запази</button>
     <button id="btnRefreshAll">Обнови всички клиенти</button>
     <button id="btnRefreshItems">Обнови артикули</button>
+    <button id="btnInitItems">Инициализирай артикули</button>
   </div>
 
   <h3>Статистика</h3>
@@ -202,6 +203,17 @@
           })
           .refreshItemsCache();
         sendActivity('refresh_items_cache');
+      });
+      document.getElementById('btnInitItems').addEventListener('click', () => {
+        google.script.run
+          .withSuccessHandler(res => {
+            const cnt = res && res.count !== undefined ? res.count : 0;
+            alert(`Инициализирани са ${cnt} артикула.`);
+            loadItemsCache();
+          })
+          .withFailureHandler(err => alert('Грешка при инициализация: ' + err.message))
+          .initializeItemsCache();
+        sendActivity('initialize_items_cache');
       });
       document.getElementById('btnReloadCache').addEventListener('click', loadCacheEntries);
 
