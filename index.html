@@ -1625,24 +1625,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   </script>
   <script>
-  function processBarcode(bc) {
-    const out = document.getElementById('outputMessage');
-    out.textContent = 'Обработка...';
-    google.script.run
-      .withSuccessHandler(function(res){
-        if (res && !res.error) {
-          const { code, name, barcode, qty } = res;
-          if (qty != null) {
-            updateItemDetails(code, name, barcode || bc, qty);
-          } else {
-            updateItemDetails(code, name, barcode || bc, null);
-          }
+  function processBarcode(barcode) {
+    document.getElementById('outputMessage').textContent = 'Обработка...';
+
+    if (barcode.startsWith('28')) {
+      const codeE = barcode.substring(0,7).replace(/^28/, '3');
+      const qty   = parseInt(barcode.substring(7,12),10)/1000;
+
+      google.script.run.withSuccessHandler(name => {
+        if (name) {
+          google.script.run.withSuccessHandler(barcodeC => {
+            const bcToShow = barcodeC || '';
+            updateItemDetails(codeE, name, bcToShow, qty);
+          }).getBarcodeByCode(codeE);
         } else {
-          out.textContent = (res && res.error) ? res.error : 'Грешка.';
+          const alt = '4' + codeE.substring(1);
+          google.script.run.withSuccessHandler(name2 => {
+            if (name2) {
+              google.script.run.withSuccessHandler(barcodeC => {
+                const bcToShow = barcodeC || '';
+                updateItemDetails(alt, name2, bcToShow, qty);
+              }).getBarcodeByCode(alt);
+            } else {
+              document.getElementById('outputMessage').textContent = 'Не намерен!';
+            }
+          }).findItemNameByCode(alt);
         }
-      })
-      .withFailureHandler(function(err){ out.textContent = 'Грешка: ' + err.message; })
-      .parseBarcodeSmart(bc);
+      }).findItemNameByCode(codeE);
+
+    } else {
+      const code = barcode;
+      google.script.run.withSuccessHandler(name => {
+        if (name) updateItemDetails(code, name, barcode, null);
+        else {
+          google.script.run.withSuccessHandler(nameF => {
+            if (nameF) updateItemDetails(code, nameF, barcode, null);
+            else document.getElementById('outputMessage').textContent = 'Не намерен!';
+          }).findItemNameByCodeInColumnF(code);
+        }
+      }).findItemNameByCode(code);
+    }
   }
   </script>
   <script>
