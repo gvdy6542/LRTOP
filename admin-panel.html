@@ -55,6 +55,14 @@
     <tbody></tbody>
   </table>
 
+  <h3>Кеширани артикули</h3>
+  <table id="itemsCacheTable" border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr><th>Код</th><th>Име</th><th>Баркод</th><th>Кратък код</th><th>Цена</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <h3>Кеш</h3>
   <button id="btnReloadCache">Обнови кеша</button>
   <table id="cacheTable" border="1" cellpadding="4" cellspacing="0">
@@ -133,6 +141,21 @@
       }).getClientStats();
     }
 
+    function loadItemsCache(){
+      google.script.run
+        .withSuccessHandler(items => {
+          const tbody = document.querySelector('#itemsCacheTable tbody');
+          tbody.innerHTML = '';
+          items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${item.code}</td><td>${item.name}</td><td>${item.barcode || ''}</td><td>${item.shortCode || ''}</td><td>${item.price ?? ''}</td>`;
+            tbody.appendChild(tr);
+          });
+        })
+        .withFailureHandler(err => alert('Грешка при зареждане на артикули: ' + err.message))
+        .getAllCachedItems();
+    }
+
     function loadCacheEntries(){
       google.script.run
         .withSuccessHandler(entries => {
@@ -185,6 +208,7 @@
       loadConfig();
       updateFolderLinks();
       loadClientStats();
+      loadItemsCache();
       loadCacheEntries();
       setInterval(loadClientStats, 1000);
       sendActivity('admin_loaded');
