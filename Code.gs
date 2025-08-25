@@ -31,10 +31,12 @@ function loadItemsCache() {
       .trim();
     const price = parseFloat(rawPrice);
 
+    const paddedShort = shortCode ? shortCode.padStart(4, '0') : '';
     const item = {
       code: code,
       name: name,
       barcode: barcode,
+      shortCode: paddedShort,
       price: isNaN(price) ? null : price
     };
     if (code) {
@@ -45,6 +47,9 @@ function loadItemsCache() {
     }
     if (shortCode) {
       byShortCode[shortCode] = item;
+      if (paddedShort !== shortCode) {
+        byShortCode[paddedShort] = item;
+      }
     }
   });
 
@@ -68,7 +73,7 @@ function loadItemsCache() {
 /**
  * Взема артикул от кеша по код, баркод или кратък код.
  * @param {string|number} codeOrBarcode
- * @return {{code:string,name:string,barcode?:string,price:(number|null)}|null}
+ * @return {{code:string,name:string,barcode?:string,shortCode?:string,price:(number|null)}|null}
  */
 function getItemFromCache(codeOrBarcode) {
   const cache = CacheService.getScriptCache();
@@ -96,6 +101,7 @@ function getItemFromCache(codeOrBarcode) {
         code: item.code,
         name: item.name,
         barcode: item.barcode,
+        shortCode: item.shortCode,
         price: item.price
       }
     : null;
