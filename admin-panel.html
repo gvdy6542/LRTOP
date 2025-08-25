@@ -44,6 +44,7 @@
   <div class="row" style="margin-top:12px">
     <button id="btnSave">Запази</button>
     <button id="btnRefreshAll">Обнови всички клиенти</button>
+    <button id="btnRefreshItems">Обнови артикули</button>
   </div>
 
   <h3>Статистика</h3>
@@ -135,6 +136,12 @@
       document.getElementById('btnRefreshAll').addEventListener('click', () => {
         refreshAllClients();
         sendActivity('refresh_clients');
+      });
+      document.getElementById('btnRefreshItems').addEventListener('click', () => {
+        google.script.run.withSuccessHandler(() => {
+          alert('Кешът на артикулите е обновен.');
+        }).refreshItemsCache();
+        sendActivity('refresh_items_cache');
       });
 
       loadConfig();
