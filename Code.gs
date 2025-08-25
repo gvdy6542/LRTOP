@@ -127,8 +127,14 @@ function findByBarcode(barcode) {
  */
 function refreshItemsCache() {
   const index = buildItemsIndex_();
+  // Persist the freshly built index
   saveIndexToFile_(index);
-  CacheService.getScriptCache().put(ITEMS_CACHE_KEY, JSON.stringify(index), ITEMS_CACHE_TTL);
+
+  // Replace the cached value with the new index
+  const cache = CacheService.getScriptCache();
+  cache.remove(ITEMS_CACHE_KEY);
+  cache.put(ITEMS_CACHE_KEY, JSON.stringify(index), ITEMS_CACHE_TTL);
+
   return index;
 }
 
