@@ -25,7 +25,18 @@ function loadItemsCache() {
     const shortCode = String(r[7]).trim();
     if (!code && !barcode && !shortCode) return;
 
-    const item = { code: code, name: name, barcode: barcode };
+    const rawPrice = String(r[5])
+      .replace(/[^0-9.,]/g, '')
+      .replace(',', '.')
+      .trim();
+    const price = parseFloat(rawPrice);
+
+    const item = {
+      code: code,
+      name: name,
+      barcode: barcode,
+      price: isNaN(price) ? null : price
+    };
     if (code) {
       byCode[code] = item;
     }
@@ -57,7 +68,7 @@ function loadItemsCache() {
 /**
  * Взема артикул от кеша по код, баркод или кратък код.
  * @param {string|number} codeOrBarcode
- * @return {{code:string,name:string,barcode?:string}|null}
+ * @return {{code:string,name:string,barcode?:string,price:(number|null)}|null}
  */
 function getItemFromCache(codeOrBarcode) {
   const cache = CacheService.getScriptCache();
@@ -80,7 +91,14 @@ function getItemFromCache(codeOrBarcode) {
   const key = String(codeOrBarcode).trim();
 
   const item = data.byCode[key] || data.byBarcode[key] || data.byShortCode[key];
-  return item ? { code: item.code, name: item.name, barcode: item.barcode } : null;
+  return item
+    ? {
+        code: item.code,
+        name: item.name,
+        barcode: item.barcode,
+        price: item.price
+      }
+    : null;
 }
 
 // Конфигурация по подразбиране
@@ -271,18 +289,25 @@ function getRefreshTimestamp() {
 }
 
 function processBarcode(barcode) {
-  const candidates = [barcode];
-  if (barcode.startsWith('28')) {
-    const base = barcode.substring(0, 7).replace(/^28/, '3');
-    candidates.push(base);
-    candidates.push('4' + base.substring(1));
-  } else if (barcode.startsWith('8') && barcode.length >= 6) {
-    const core = barcode.substring(1, 6);
-    candidates.push('3' + core);
-    candidates.push('4' + core);
+  const bc = String(barcode).trim();
+  const candidates = [bc];
+
+  if (bc.startsWith('28') && bc.length >= 7) {
+    const itemCode = bc.substring(2, 7);
+    candidates.push('3' + itemCode);
+    candidates.push('4' + itemCode);
+    candidates.push(itemCode);
+  } else if (bc.startsWith('8') && bc.length >= 6) {
+    const itemCode = bc.substring(1, 6);
+    candidates.push('3' + itemCode);
+    candidates.push('4' + itemCode);
+    candidates.push(itemCode);
+  } else if ((bc.startsWith('3') || bc.startsWith('4')) && bc.length >= 6) {
+    candidates.push(bc.substring(1, 6));
   }
+
   for (const code of candidates) {
-    const item = lookupItem(code);
+    const item = getItemFromCache(code);
     if (item) return item;
   }
   return { error: 'Артикулът с този баркод не е намерен.' };
@@ -1681,67 +1706,14 @@ function roundEuro(value) {
   return (final / 100).toFixed(2);
 }
 
-const ItemCache = (() => {
-  let cache = null;
-  return {
-    get(barcode) {
-      if (!cache) {
-        const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName('Лист1');
-        if (!sheet) return null;
-        cache = {};
-        const rows = sheet.getRange('A:F').getValues();
-        rows.forEach(r => {
-          const bc = String(r[2]);
-          if (!bc) return;
-          const rawPrice = String(r[5])
-            .replace(/[^0-9.,]/g, '')
-            .replace(',', '.')
-            .trim();
-          const price = parseFloat(rawPrice);
-          cache[bc] = {
-            code: r[0],
-            name: r[1],
-            barcode: r[2],
-            price: isNaN(price) ? null : price
-          };
-        });
-      }
-      return cache[String(barcode)] || null;
-    }
-  };
-})();
-
-/**
- * Looks up an item by barcode using the in-memory ItemCache.
- * Returns a simplified object with code, name and price or null if not found
- * or on error.
- *
- * @param {string} barcode
- * @return {{code:string,name:string,price:number|null}|null}
- */
-function lookupItem(barcode) {
-  try {
-    const item = ItemCache.get(barcode);
-    if (!item) return null;
-    return {
-      code: item.code,
-      name: item.name,
-      price: item.price
-    };
-  } catch (err) {
-    return null;
-  }
-}
-
 function fetchProductByBarcode(barcode) {
-  const item = lookupItem(barcode);
-  return item ? { ...item, barcode: barcode } : null;
+  return getItemFromCache(barcode);
 }
 
 function fetchPreviewData(barcodes) {
   if (!Array.isArray(barcodes)) return [];
   return barcodes
-    .map(bc => fetchProductByBarcode(bc))
+    .map(bc => getItemFromCache(bc))
     .filter(item => item);
 }
 
