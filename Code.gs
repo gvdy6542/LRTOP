@@ -941,6 +941,16 @@ function findItemNameByCode(itemCode) {
   const item = getItemFromCache(itemCode);
   return item ? item.name : null;
 }
+
+function findItemNameByBarcode(barcode) {
+  const item = getItemFromCache(barcode);
+  return item ? item.name : null;
+}
+
+function findItemNumberByBarcode(barcode) {
+  const item = getItemFromCache(barcode);
+  return item ? item.code : null;
+}
 // Функция за запис в "Опис"
 function transferToDescriptionSheet(itemCode, itemName, quantity) {
   const descriptionSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Опис");
