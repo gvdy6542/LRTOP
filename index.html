@@ -889,43 +889,6 @@ document.addEventListener('click', e => {
       }
     }
 
-    // 6. Call GAS to find item
-    function processBarcode(barcode) {
-      const bc = String(barcode).trim();
-      // route special command barcodes directly to their handlers
-      switch (bc) {
-        case '*0000':
-          openReference();
-          return;
-        case '*0001':
-          openinterface();
-          return;
-        case '*0002':
-          openLabels();
-          return;
-      }
-
-      document.getElementById('outputMessage').textContent = 'Обработка...';
-      google.script.run
-        .withSuccessHandler(res => {
-          if (res && res.error) {
-            document.getElementById('outputMessage').textContent = res.error;
-            return;
-          }
-          if (res && res.qty != null) {
-            updateItemDetails(res.code, res.name, res.barcode, res.qty);
-          } else if (res) {
-            updateItemDetails(res.code, res.name, res.barcode, null);
-          } else {
-            document.getElementById('outputMessage').textContent = 'Не намерен!';
-          }
-        })
-        .withFailureHandler(err => {
-          const msg = err && err.message ? err.message : 'Грешка при търсене!';
-          document.getElementById('outputMessage').textContent = msg;
-        })
-        .parseBarcodeSmart(bc);
-    }
 
     // 7. Update UI
     function updateItemDetails(ic,inb,bc,qt) {
@@ -1660,8 +1623,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-</script>
-<script>
+  </script>
+  <script>
+  function processBarcode(bc) {
+    const out = document.getElementById('outputMessage');
+    out.textContent = 'Обработка...';
+    google.script.run
+      .withSuccessHandler(function(res){
+        if (res && !res.error) {
+          const { code, name, barcode, qty } = res;
+          if (qty != null) {
+            updateItemDetails(code, name, barcode || bc, qty);
+          } else {
+            updateItemDetails(code, name, barcode || bc, null);
+          }
+        } else {
+          out.textContent = (res && res.error) ? res.error : 'Грешка.';
+        }
+      })
+      .withFailureHandler(function(err){ out.textContent = 'Грешка: ' + err.message; })
+      .parseBarcodeSmart(bc);
+  }
+  </script>
+  <script>
 function applyConfig(cfg){
   window.appConfig = cfg || {};
   document.getElementById('interfaceButton').style.display = cfg.showInterfaceButton ? 'inline-block' : 'none';
