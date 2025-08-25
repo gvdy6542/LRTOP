@@ -1004,6 +1004,20 @@ function findItemNumberByBarcode(barcode) {
   const item = getItemFromCache(barcode);
   return item ? item.code : null;
 }
+
+/**
+ * Връща баркода от колона C за даден артикулен код (A)
+ */
+function getBarcodeByCode(itemCode) {
+  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Лист1');
+  const rng = sh.getDataRange().getValues(); // columns A..C
+  for (let i = 0; i < rng.length; i++) {
+    if (String(rng[i][0]) === String(itemCode)) { // column A
+      return String(rng[i][2] || '');            // column C
+    }
+  }
+  return '';
+}
 // Функция за запис в "Опис"
 function transferToDescriptionSheet(itemCode, itemName, quantity) {
   const descriptionSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Опис");
