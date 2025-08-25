@@ -200,6 +200,57 @@ function refreshItemsCache() {
 }
 
 /**
+ * Lists known cache entries with their values.
+ * @return {{key:string,value:string}[]}
+ */
+function listCacheEntries() {
+  const cache = CacheService.getScriptCache();
+  const result = [];
+
+  const add = key => {
+    const val = cache.get(key);
+    if (val !== null) result.push({ key: key, value: val });
+  };
+
+  // Simple keys
+  ['itemsIndex', 'itemsCache'].forEach(add);
+
+  // Handle itemsIndex parts
+  const indexParts = cache.get('itemsIndex_parts');
+  if (indexParts) {
+    result.push({ key: 'itemsIndex_parts', value: indexParts });
+    const parts = parseInt(indexParts, 10);
+    for (let i = 0; i < parts; i++) {
+      add('itemsIndex_' + i);
+    }
+  }
+
+  // Handle itemsCache parts
+  const cacheParts = cache.get('itemsCache_parts');
+  if (cacheParts) {
+    result.push({ key: 'itemsCache_parts', value: cacheParts });
+    const parts = parseInt(cacheParts, 10);
+    for (let i = 0; i < parts; i++) {
+      add('itemsCache_' + i);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Updates a cache entry with a new value.
+ * @param {string} key
+ * @param {string} value
+ * @return {{ok:boolean}}
+ */
+function updateCacheEntry(key, value) {
+  const cache = CacheService.getScriptCache();
+  cache.put(String(key), String(value), ITEMS_CACHE_TTL);
+  return { ok: true };
+}
+
+/**
  * Зарежда данните от „Лист1“ в кеш за бърз достъп.
  * @return {{byCode:Object,byBarcode:Object,byShortCode:Object}}
  */
