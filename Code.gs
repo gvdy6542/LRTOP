@@ -217,11 +217,14 @@ function loadItemsCache() {
   const byShortCode = {};
 
   rows.forEach(r => {
-    const code = String(r[0]).trim();
+    const rawCode = String(r[0]).trim();
     const name = String(r[1]).trim();
     const barcode = String(r[2]).trim();
-    const shortCode = String(r[7]).trim();
-    if (!code && !barcode && !shortCode) return;
+    const rawShortCode = String(r[7]).trim();
+    if (!rawCode && !barcode && !rawShortCode) return;
+
+    const code = rawCode.padStart(6, '0');
+    const shortCode = rawShortCode.padStart(6, '0');
 
     const rawPrice = String(r[5])
       .replace(/[^0-9.,]/g, '')
@@ -237,13 +240,13 @@ function loadItemsCache() {
       shortCode: paddedShort,
       price: isNaN(price) ? null : price
     };
-    if (code) {
+    if (rawCode) {
       byCode[code] = item;
     }
     if (barcode) {
       byBarcode[barcode] = item;
     }
-    if (shortCode) {
+    if (rawShortCode) {
       byShortCode[shortCode] = item;
       if (paddedShort !== shortCode) {
         byShortCode[paddedShort] = item;
@@ -291,7 +294,7 @@ function getItemFromCache(codeOrBarcode) {
     }
   }
   const data = raw ? JSON.parse(raw) : loadItemsCache();
-  const key = String(codeOrBarcode).trim();
+  const key = String(codeOrBarcode).trim().padStart(6, '0');
 
   const item = data.byCode[key] || data.byBarcode[key] || data.byShortCode[key];
   return item
