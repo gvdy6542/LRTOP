@@ -509,6 +509,7 @@
        </div>
         <button id="labelsButton" class="green-button">Етикети</button>
         <button id="adminBtn" class="green-button" style="display:none;">Admin</button>
+        <button id="refreshCacheBtn" class="green-button">Обнови кеш</button>
 
     </div>
     
@@ -1611,6 +1612,13 @@ function submitPprEdits(){
     .updatePprData(store,num,rows);
 }
 
+function refreshCache(){
+  google.script.run
+    .withSuccessHandler(() => alert('Кешът беше обновен успешно!'))
+    .withFailureHandler(err => alert('Грешка при обновяване на кеша: ' + err.message))
+    .refreshItemsCache();
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('startRevisionBtn').addEventListener('click', startRevision);
@@ -1632,6 +1640,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('loadPprBtn').addEventListener('click', loadPprForEdit);
   document.getElementById('submitPprEditsBtn').addEventListener('click', submitPprEdits);
   document.getElementById('closeCheckPprBtn').addEventListener('click', closeCheckPprModal);
+  document.getElementById('refreshCacheBtn').addEventListener('click', refreshCache);
 
   document.addEventListener('click', e => {
     if (e.target.classList.contains('edit-btn')) {
