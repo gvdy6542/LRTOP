@@ -56,6 +56,8 @@
     <tbody></tbody>
   </table>
 
+  <button id="btnCreateCache">Създай кеш</button>
+
   <h3>Кеширани артикули</h3>
   <table id="itemsCacheTable" border="1" cellpadding="4" cellspacing="0">
     <thead>
@@ -214,6 +216,11 @@
           .withFailureHandler(err => alert('Грешка при инициализация: ' + err.message))
           .initializeItemsCache();
         sendActivity('initialize_items_cache');
+      });
+      document.getElementById('btnCreateCache').addEventListener('click', () => {
+        google.script.run
+          .withSuccessHandler(loadItemsCache)
+          .initializeItemsCache();
       });
       document.getElementById('btnReloadCache').addEventListener('click', loadCacheEntries);
 
