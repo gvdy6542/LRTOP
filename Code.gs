@@ -628,7 +628,7 @@ function parseBarcodeSmart(bc) {
     return { error: 'Невалиден баркод.' };
   }
   if (/^\d{6}$/.test(raw)) {
-    const item = findByCode(raw);
+    const item = getItemFromCache(raw);
     return item
       ? { code: item.code, name: item.name, barcode: item.barcode || raw, qty: null }
       : { error: 'Артикулът не е намерен.' };
@@ -638,18 +638,18 @@ function parseBarcodeSmart(bc) {
     const grams = raw.substring(7, 12);
     const qty = grams ? parseInt(grams, 10) / 1000 : 0;
     const codeE = '3' + itemCode;
-    let item = findByCode(codeE);
+    let item = getItemFromCache(codeE);
     if (!item) {
-      item = findByCode('4' + codeE.substring(1));
+      item = getItemFromCache('4' + codeE.substring(1));
     }
     return item
       ? { code: item.code, name: item.name, barcode: raw, qty: qty }
       : { error: 'Артикулът не е намерен.' };
   }
   if (/^\d{8,13}$/.test(raw)) {
-    const item = findByBarcode(raw);
+    const item = getItemFromCache(raw);
     return item
-      ? { code: item.code, name: item.name, barcode: raw, qty: null }
+      ? { code: item.code, name: item.name, barcode: item.barcode || raw, qty: null }
       : { error: 'Артикулът не е намерен.' };
   }
   return { error: 'Невалиден баркод.' };
