@@ -153,7 +153,7 @@ function loadItemsIndexFromCache_(cache) {
 
 /**
  * Retrieves items index from cache, Drive or rebuilds if missing.
- * @return {{byCode:Object,byBarcode:Object}}
+ * @return {{byCode:Object,byBarcode:Object,byShortCode:Object}}
  */
 function getItemsIndex_() {
   const cache = CacheService.getScriptCache();
@@ -189,6 +189,17 @@ function findByBarcode(barcode) {
   const key = String(barcode).trim();
   if (!key) return null;
   return getItemsIndex_().byBarcode[key] || null;
+}
+
+/**
+ * Finds an item by its short code.
+ * @param {string|number} shortCode
+ * @return {?Object}
+ */
+function findByShortCode(shortCode) {
+  const key = String(shortCode).trim();
+  if (!key) return null;
+  return getItemsIndex_().byShortCode[key] || null;
 }
 
 /**
@@ -412,7 +423,11 @@ function getItemFromCache(codeOrBarcode) {
   const data = raw ? JSON.parse(raw) : loadItemsCache();
   const key = String(codeOrBarcode).trim();
 
-  const item = data.byCode[key] || data.byBarcode[key] || data.byShortCode[key];
+  const item =
+    data.byCode[key] ||
+    data.byBarcode[key] ||
+    data.byShortCode[key] ||
+    findByShortCode(key);
   return item
     ? {
         code: item.code,
