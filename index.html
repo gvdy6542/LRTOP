@@ -1649,9 +1649,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               document.getElementById('outputMessage').textContent = 'Не намерен!';
             }
-          }).findItemNameByCode(alt);
+            }).findItemNameByCodeInSheet(alt);
         }
-      }).findItemNameByCode(codeE);
+        }).findItemNameByCodeInSheet(codeE);
 
     } else {
       const code = barcode;
@@ -1661,9 +1661,9 @@ document.addEventListener('DOMContentLoaded', () => {
           google.script.run.withSuccessHandler(nameF => {
             if (nameF) updateItemDetails(code, nameF, barcode, null);
             else document.getElementById('outputMessage').textContent = 'Не намерен!';
-          }).findItemNameByCodeInColumnF(code);
+            }).findItemNameByCodeInSheet(code);
         }
-      }).findItemNameByCode(code);
+        }).findItemNameByCodeInSheet(code);
     }
   }
   </script>
