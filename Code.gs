@@ -307,9 +307,8 @@ function loadItemsCache() {
   rows.forEach(r => {
     const code = String(r[0]).trim();
     const name = String(r[1]).trim();
-    const barcode = String(r[2]).trim();
-    const shortCode = String(r[7]).trim();
-    if (!code && !barcode && !shortCode) return;
+    const colC = String(r[2]).trim();
+    if (!code && !colC) return;
 
     const rawPrice = String(r[5])
       .replace(/[^0-9.,]/g, '')
@@ -317,12 +316,19 @@ function loadItemsCache() {
       .trim();
     const price = parseFloat(rawPrice);
 
-    const paddedShort = shortCode ? shortCode.padStart(4, '0') : '';
+    let barcode = '';
+    let shortCode = '';
+    if (/^\d{1,6}$/.test(colC)) {
+      shortCode = colC.padStart(6, '0');
+    } else if (colC) {
+      barcode = colC;
+    }
+
     const item = {
       code: code,
       name: name,
       barcode: barcode,
-      shortCode: paddedShort,
+      shortCode: shortCode,
       price: isNaN(price) ? null : price
     };
     if (code) {
@@ -333,8 +339,8 @@ function loadItemsCache() {
     }
     if (shortCode) {
       byShortCode[shortCode] = item;
-      if (paddedShort !== shortCode) {
-        byShortCode[paddedShort] = item;
+      if (colC !== shortCode) {
+        byShortCode[colC] = item;
       }
     }
   });
