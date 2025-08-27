@@ -3,7 +3,7 @@ const CONFIG_SS_ID = MAIN_SS_ID;                                      // кон�
 const EUR_RATE     = 1.95583;                                         // курс евро
 
 // Sheet and caching constants for items index
-const ITEMS_SHEET_NAME = 'Лист1';
+const ITEMS_SHEET_NAME = '666';
 const ITEMS_CACHE_KEY = 'itemsIndex';
 const ITEMS_CACHE_TTL = 300; // seconds
 const INDEX_FILE_NAME = 'itemsIndex.json';
@@ -19,19 +19,21 @@ var processedFilesList = [];
  */
 function buildItemsIndex_() {
   const sheet = SpreadsheetApp.openById(MAIN_SS_ID).getSheetByName(ITEMS_SHEET_NAME);
-  if (!sheet) return { byCode: {}, byBarcode: {} };
+  if (!sheet) return { byCode: {}, byBarcode: {}, byShortCode: {} };
 
-  const rows = sheet.getDataRange().getValues();
+  const rows = sheet.getRange('A:E').getValues();
   const byCode = {};
   const byBarcode = {};
+  const byShortCode = {};
 
   rows.forEach((r, i) => {
     const code = String(r[0]).trim();
     const name = String(r[1]).trim();
     const barcode = String(r[2]).trim();
-    if (!code && !barcode) return;
+    const shortCode = String(r[3]).trim();
+    if (!code && !barcode && !shortCode) return;
 
-    const rawPrice = String(r[5])
+    const rawPrice = String(r[4])
       .replace(/[^0-9.,]/g, '')
       .replace(',', '.')
       .trim();
@@ -41,14 +43,16 @@ function buildItemsIndex_() {
       code: code,
       name: name,
       barcode: barcode,
+      shortCode: shortCode,
       price: isNaN(price) ? null : price,
       row: i + 1
     };
     if (code) byCode[code] = item;
     if (barcode) byBarcode[barcode] = item;
+    if (shortCode) byShortCode[shortCode] = item;
   });
 
-  return { byCode: byCode, byBarcode: byBarcode };
+  return { byCode: byCode, byBarcode: byBarcode, byShortCode: byShortCode };
 }
 
 /**
@@ -200,13 +204,13 @@ function refreshItemsCache() {
 }
 
 /**
- * Reads all rows from sheet "Лист1", removes duplicates by article code
+ * Reads all rows from sheet "666", removes duplicates by article code
  * and writes the unique rows into sheet "666".
  * @return {{count:number}}
  */
 function initializeItemsCache() {
   const ss = SpreadsheetApp.openById(MAIN_SS_ID);
-  const source = ss.getSheetByName('Лист1');
+  const source = ss.getSheetByName(ITEMS_SHEET_NAME);
   if (!source) {
     return { count: 0 };
   }
@@ -222,7 +226,7 @@ function initializeItemsCache() {
     unique.set(code, row);
   }
 
-  let target = ss.getSheetByName('666');
+    let target = ss.getSheetByName(ITEMS_SHEET_NAME);
   if (!target) {
     target = ss.insertSheet('666');
   } else {
@@ -253,7 +257,7 @@ function listCacheEntries() {
   };
 
   // Simple keys
-  ['itemsIndex', 'itemsCache'].forEach(add);
+  ['itemsIndex'].forEach(add);
 
   // Handle itemsIndex parts
   const indexParts = cache.get('itemsIndex_parts');
@@ -262,16 +266,6 @@ function listCacheEntries() {
     const parts = parseInt(indexParts, 10);
     for (let i = 0; i < parts; i++) {
       add('itemsIndex_' + i);
-    }
-  }
-
-  // Handle itemsCache parts
-  const cacheParts = cache.get('itemsCache_parts');
-  if (cacheParts) {
-    result.push({ key: 'itemsCache_parts', value: cacheParts });
-    const parts = parseInt(cacheParts, 10);
-    for (let i = 0; i < parts; i++) {
-      add('itemsCache_' + i);
     }
   }
 
@@ -291,99 +285,11 @@ function updateCacheEntry(key, value) {
 }
 
 /**
- * Зарежда данните от „Лист1“ в кеш за бърз достъп.
- * @return {{byCode:Object,byBarcode:Object,byShortCode:Object}}
+ * Връща всички артикули от индекса като масив.
+ * @return {Array<{code:string,name:string,barcode:string,shortCode:string,price:(number|null)}>}
  */
-function loadItemsCache() {
-  const sheet = SpreadsheetApp.openById(MAIN_SS_ID)
-                               .getSheetByName('Лист1');
-  if (!sheet) return { byCode: {}, byBarcode: {}, byShortCode: {} };
-
-  const rows = sheet.getRange('A:H').getValues();
-  const byCode = {};
-  const byBarcode = {};
-  const byShortCode = {};
-
-  rows.forEach(r => {
-    const code = String(r[0]).trim();
-    const name = String(r[1]).trim();
-    const colC = String(r[2]).trim();
-    if (!code && !colC) return;
-
-    const rawPrice = String(r[5])
-      .replace(/[^0-9.,]/g, '')
-      .replace(',', '.')
-      .trim();
-    const price = parseFloat(rawPrice);
-
-    let barcode = '';
-    let shortCode = '';
-    if (/^\d{1,6}$/.test(colC)) {
-      shortCode = colC.padStart(6, '0');
-    } else if (colC) {
-      barcode = colC;
-    }
-
-    const item = {
-      code: code,
-      name: name,
-      barcode: barcode,
-      shortCode: shortCode,
-      price: isNaN(price) ? null : price
-    };
-    if (code) {
-      byCode[code] = item;
-    }
-    if (barcode) {
-      byBarcode[barcode] = item;
-    }
-    if (shortCode) {
-      byShortCode[shortCode] = item;
-      if (colC !== shortCode) {
-        byShortCode[colC] = item;
-      }
-    }
-  });
-
-  const data = { byCode: byCode, byBarcode: byBarcode, byShortCode: byShortCode };
-
-  const cache = CacheService.getScriptCache();
-  const raw = JSON.stringify(data);
-  const LIMIT = 100 * 1024; // 100 KB
-  if (raw.length <= LIMIT) {
-    cache.put('itemsCache', raw, 300); // ~5 минути
-  } else {
-    const parts = Math.ceil(raw.length / LIMIT);
-    cache.put('itemsCache_parts', String(parts), 300);
-    for (let i = 0; i < parts; i++) {
-      cache.put('itemsCache_' + i, raw.slice(i * LIMIT, (i + 1) * LIMIT), 300);
-    }
-  }
-  return data;
-}
-
-/**
- * Връща всички артикули от кеша като масив.
- * @return {Array<{code:string,name:string,barcode:string,shortCode:string,price:(number|null)}>} 
- */
-function getAllCachedItems() {
-  const cache = CacheService.getScriptCache();
-  let raw = cache.get('itemsCache');
-  if (!raw) {
-    const partsStr = cache.get('itemsCache_parts');
-    if (partsStr) {
-      const parts = parseInt(partsStr, 10);
-      const chunks = [];
-      for (let i = 0; i < parts; i++) {
-        const chunk = cache.get('itemsCache_' + i);
-        if (chunk) chunks.push(chunk);
-      }
-      if (chunks.length === parts) {
-        raw = chunks.join('');
-      }
-    }
-  }
-  const data = raw ? JSON.parse(raw) : loadItemsCache();
+function getAllItems() {
+  const data = getItemsIndex_();
   return Object.values(data.byCode).map(item => ({
     code: item.code,
     name: item.name,
@@ -394,30 +300,14 @@ function getAllCachedItems() {
 }
 
 /**
- * Взема артикул от кеша по код, баркод или кратък код.
+ * Взема артикул от индекса по код, баркод или кратък код.
  * @param {string|number} codeOrBarcode
  * @return {{code:string,name:string,barcode?:string,shortCode?:string,price:(number|null)}|null}
  */
 function getItemFromCache(codeOrBarcode) {
-  const cache = CacheService.getScriptCache();
-  let raw = cache.get('itemsCache');
-  if (!raw) {
-    const partsStr = cache.get('itemsCache_parts');
-    if (partsStr) {
-      const parts = parseInt(partsStr, 10);
-      let chunks = [];
-      for (let i = 0; i < parts; i++) {
-        const chunk = cache.get('itemsCache_' + i);
-        if (chunk) chunks.push(chunk);
-      }
-      if (chunks.length === parts) {
-        raw = chunks.join('');
-      }
-    }
-  }
-  const data = raw ? JSON.parse(raw) : loadItemsCache();
   const key = String(codeOrBarcode).trim();
-
+  if (!key) return null;
+  const data = getItemsIndex_();
   const item = data.byCode[key] || data.byBarcode[key] || data.byShortCode[key];
   return item
     ? {
@@ -1134,16 +1024,16 @@ function findItemNumberByBarcode(barcode) {
 }
 
 /**
- * Searches for an item name by code in column F of 'Лист1'.
+ * Searches for an item name by code in column A of '666'.
  * @param {string|number} itemCode
  * @return {?string}
  */
-function findItemNameByCodeInColumnF(itemCode) {
-  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Лист1');
+function findItemNameByCodeInSheet(itemCode) {
+  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ITEMS_SHEET_NAME);
   if (!sh) return null;
   const rng = sh.getDataRange().getValues();
   for (let i = 0; i < rng.length; i++) {
-    if (String(rng[i][5]) === String(itemCode)) { // column F
+    if (String(rng[i][0]) === String(itemCode)) { // column A
       return String(rng[i][1] || '').trim() || null; // column B has the name
     }
   }
@@ -1154,7 +1044,7 @@ function findItemNameByCodeInColumnF(itemCode) {
  * Връща баркода от колона C за даден артикулен код (A)
  */
 function getBarcodeByCode(itemCode) {
-  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Лист1');
+  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ITEMS_SHEET_NAME);
   const rng = sh.getDataRange().getValues(); // columns A..C
   for (let i = 0; i < rng.length; i++) {
     if (String(rng[i][0]) === String(itemCode)) { // column A

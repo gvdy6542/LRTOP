@@ -58,8 +58,8 @@
 
   <button id="btnCreateCache">Създай кеш</button>
 
-  <h3>Кеширани артикули</h3>
-  <table id="itemsCacheTable" border="1" cellpadding="4" cellspacing="0">
+  <h3>Артикули</h3>
+  <table id="itemsTable" border="1" cellpadding="4" cellspacing="0">
     <thead>
       <tr><th>Код</th><th>Име</th><th>Баркод</th><th>Кратък код</th><th>Цена</th></tr>
     </thead>
@@ -144,10 +144,10 @@
       }).getClientStats();
     }
 
-    function loadItemsCache(){
+    function loadItems(){
       google.script.run
         .withSuccessHandler(items => {
-          const tbody = document.querySelector('#itemsCacheTable tbody');
+          const tbody = document.querySelector('#itemsTable tbody');
           tbody.innerHTML = '';
           items.forEach(item => {
             const tr = document.createElement('tr');
@@ -156,7 +156,7 @@
           });
         })
         .withFailureHandler(err => alert('Грешка при зареждане на артикули: ' + err.message))
-        .getAllCachedItems();
+        .getAllItems();
     }
 
     function loadCacheEntries(){
@@ -211,7 +211,7 @@
           .withSuccessHandler(res => {
             const cnt = res && res.count !== undefined ? res.count : 0;
             alert(`Инициализирани са ${cnt} артикула.`);
-            loadItemsCache();
+            loadItems();
           })
           .withFailureHandler(err => alert('Грешка при инициализация: ' + err.message))
           .initializeItemsCache();
@@ -219,7 +219,7 @@
       });
       document.getElementById('btnCreateCache').addEventListener('click', () => {
         google.script.run
-          .withSuccessHandler(loadItemsCache)
+          .withSuccessHandler(loadItems)
           .initializeItemsCache();
       });
       document.getElementById('btnReloadCache').addEventListener('click', loadCacheEntries);
@@ -227,7 +227,7 @@
       loadConfig();
       updateFolderLinks();
       loadClientStats();
-      loadItemsCache();
+      loadItems();
       loadCacheEntries();
       setInterval(loadClientStats, 1000);
       sendActivity('admin_loaded');
