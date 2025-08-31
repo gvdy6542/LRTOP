@@ -1129,17 +1129,36 @@ function updateRevisionSheet(itemCode, itemName, quantity) {
 // Намиране на име на артикул по код чрез кеша
 function findItemNameByCode(itemCode) {
   const item = getItemFromCache(itemCode);
-  return item ? item.name : null;
+  if (item) return item.name;
+  return findItemNameByCodeInSheet(itemCode);
 }
 
 function findItemNameByBarcode(barcode) {
   const item = getItemFromCache(barcode);
-  return item ? item.name : null;
+  if (item) return item.name;
+  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ITEMS_SHEET_NAME);
+  if (!sh) return null;
+  const rng = sh.getDataRange().getValues();
+  for (let i = 0; i < rng.length; i++) {
+    if (String(rng[i][2]) === String(barcode)) {
+      return String(rng[i][1] || '').trim() || null;
+    }
+  }
+  return null;
 }
 
 function findItemNumberByBarcode(barcode) {
   const item = getItemFromCache(barcode);
-  return item ? item.code : null;
+  if (item) return item.code;
+  const sh  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ITEMS_SHEET_NAME);
+  if (!sh) return null;
+  const rng = sh.getDataRange().getValues();
+  for (let i = 0; i < rng.length; i++) {
+    if (String(rng[i][2]) === String(barcode)) {
+      return String(rng[i][0] || '').trim() || null;
+    }
+  }
+  return null;
 }
 
 /**
@@ -1152,7 +1171,10 @@ function findItemNameByCodeInSheet(itemCode) {
   if (!sh) return null;
   const rng = sh.getDataRange().getValues();
   for (let i = 0; i < rng.length; i++) {
-    if (String(rng[i][0]) === String(itemCode)) { // column A
+    if (
+      String(rng[i][0]) === String(itemCode) || // column A
+      String(rng[i][2]) === String(itemCode)    // column C (alternative code)
+    ) {
       return String(rng[i][1] || '').trim() || null; // column B has the name
     }
   }
