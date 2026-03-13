@@ -80,7 +80,7 @@
 
    @media print{
   /* Автоматично ориентиране – може да сменяш portrait <-> landscape */
-  @page{ size: auto; margin:10mm; } /* 10mm = 1cm */
+  @page{ size: A4 portrait; margin:7mm; }
 
   html, body{
     background:#fff !important;
@@ -102,6 +102,7 @@
     grid-template-columns: repeat(var(--cols, 3), var(--label-w)) !important;
     grid-template-rows: auto !important;
     gap:0 !important;
+    justify-content:center !important;
     background:#fff !important;
   }
 
@@ -196,7 +197,7 @@
               <tr>
                 <th class="col-num">Номер</th>
                 <th class="col-name">Описание</th>
-                <th class="col-price">Цена (лв)</th>
+                <th class="col-price">Цена (€)</th>
                 <th class="row-tools">Действия</th>
               </tr>
             </thead>
@@ -293,9 +294,10 @@
     recalcPrintGrid(); render();
   }
   function recalcPrintGrid(){
-    const pageW = 210, pageH = 297, topMargin = 10;
-    const usableH = pageH - topMargin;
-    const cols = Math.max(1, Math.floor(pageW / labelWmm));
+    const pageW = 210, pageH = 297, margin = 7;
+    const usableW = pageW - 2 * margin;
+    const usableH = pageH - 2 * margin;
+    const cols = Math.max(1, Math.floor(usableW / labelWmm));
     const rows = Math.max(1, Math.floor(usableH / labelHmm));
     document.getElementById('preview').style.setProperty('--cols', cols);
     document.getElementById('preview').style.setProperty('--rows', rows);
@@ -412,11 +414,11 @@
       const name = (ce[1]?.textContent || '').trim();
       const priceNum = normalizePrice((ce[2]?.textContent || '').trim());
       if (!code || !name || priceNum==null) return;
-      const euro = roundEuro(priceNum / 1.95583);
+      const bgn = (priceNum * 1.95583).toFixed(2);
       labels.push({
         code,
         name,
-        price: `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:1em;">${euro} €</div>`
+        price: `<div style="font-size:1em;">${priceNum.toFixed(2)} €</div><div style="font-size:1em;">${bgn} лв.</div>`
       });
     });
 
@@ -454,12 +456,12 @@
     if(!code || !name || priceStr===''){ alert('Попълни Код, Име и Цена.'); return; }
     if (priceNum==null){ alert('Невалидна цена. Допуска се и , и .'); return; }
 
-    const euro = roundEuro(priceNum / 1.95583);
+    const bgn = (priceNum * 1.95583).toFixed(2);
     labels.unshift({
       code,
       barcode,
       name,
-      price: `<div style="font-size:1em;">${priceNum.toFixed(2)} лв.</div><div style="font-size:0.85em;">${euro} €</div>`
+      price: `<div style="font-size:1em;">${priceNum.toFixed(2)} €</div><div style="font-size:1em;">${bgn} лв.</div>`
     });
 
     ['customCode','customName','customPrice'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });

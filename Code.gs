@@ -2131,7 +2131,7 @@ function generateLabelsSheet(items) {
   const ss = SpreadsheetApp.create('Етикети');
   const sh = ss.getActiveSheet();
   sh.getRange(1, 1, 1, 5).setValues([
-    ['Код', 'Име', 'Баркод', 'Цена (лв)', 'Цена (€)']
+    ['Код', 'Име', 'Баркод', 'Цена (€)', 'Цена (лв)']
   ]);
 
   const data = items.map(it => [
@@ -2139,7 +2139,7 @@ function generateLabelsSheet(items) {
     it.name,
     it.barcode,
     it.price ? it.price.toFixed(2) : '',
-    it.price ? roundEuro(it.price / 1.95583) : ''
+    it.price ? (it.price * EUR_RATE).toFixed(2) : ''
   ]);
 
   sh.getRange(2, 1, data.length, 5).setValues(data);
