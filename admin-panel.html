@@ -34,12 +34,26 @@
     </label>
   </div>
 
+  <div class="row">
+    <label>Goods Reception Folder ID:
+      <input type="text" id="goodsReceptionFolderId">
+      <a id="goodsReceptionFolderIdLink" class="link" href="#" target="_blank" style="display:none">Линк</a>
+    </label>
+  </div>
+
+  <div class="row">
+    <label>Goods Reception Email (имейл за прием на стока):
+      <input type="text" id="goodsReceptionEmail" placeholder="email1@example.com, email2@example.com">
+    </label>
+  </div>
+
   <h3>Бутони</h3>
   <label><input type="checkbox" id="showInterfaceButton"> Показвай "Обработка"</label>
   <label><input type="checkbox" id="showReferenceButton"> Показвай "ИНВЕНТАРИЗАЦИЯ"</label>
   <label><input type="checkbox" id="showLabelsButton"> Показвай "Етикети"</label>
   <label><input type="checkbox" id="showPprButtons"> Показвай бутоните за ППР</label>
   <label><input type="checkbox" id="showViewRevisionsBtn"> Показвай "Преглед на ревизии"</label>
+  <label><input type="checkbox" id="showGoodsReceptionBtn"> Показвай "Прием на стока"</label>
 
   <div class="row" style="margin-top:12px">
     <button id="btnSave">Запази</button>
@@ -81,7 +95,8 @@
       const pairs = [
         ['parentFolderId','parentFolderIdLink'],
         ['revisionParentFolderId','revisionParentFolderIdLink'],
-        ['pprFolderId','pprFolderIdLink']
+        ['pprFolderId','pprFolderIdLink'],
+        ['goodsReceptionFolderId','goodsReceptionFolderIdLink']
       ];
       pairs.forEach(([inputId, linkId]) => {
         const val = document.getElementById(inputId).value.trim();
@@ -102,11 +117,14 @@
         document.getElementById('parentFolderId').value = c.parentFolderId || '';
         document.getElementById('revisionParentFolderId').value = c.revisionParentFolderId || '';
         document.getElementById('pprFolderId').value = c.pprFolderId || '';
+        document.getElementById('goodsReceptionFolderId').value = c.goodsReceptionFolderId || '';
+        document.getElementById('goodsReceptionEmail').value = c.goodsReceptionEmail || '';
         document.getElementById('showInterfaceButton').checked = !!toBool(c.showInterfaceButton);
         document.getElementById('showReferenceButton').checked = !!toBool(c.showReferenceButton);
         document.getElementById('showLabelsButton').checked = !!toBool(c.showLabelsButton);
         document.getElementById('showPprButtons').checked = !!toBool(c.showPprButtons);
         document.getElementById('showViewRevisionsBtn').checked = !!toBool(c.showViewRevisionsBtn);
+        document.getElementById('showGoodsReceptionBtn').checked = !!toBool(c.showGoodsReceptionBtn);
         updateFolderLinks();
       }).getConfig();
     }
@@ -116,11 +134,14 @@
         parentFolderId: document.getElementById('parentFolderId').value.trim(),
         revisionParentFolderId: document.getElementById('revisionParentFolderId').value.trim(),
         pprFolderId: document.getElementById('pprFolderId').value.trim(),
+        goodsReceptionFolderId: document.getElementById('goodsReceptionFolderId').value.trim(),
+        goodsReceptionEmail: document.getElementById('goodsReceptionEmail').value.trim(),
         showInterfaceButton: document.getElementById('showInterfaceButton').checked,
         showReferenceButton: document.getElementById('showReferenceButton').checked,
         showLabelsButton: document.getElementById('showLabelsButton').checked,
         showPprButtons: document.getElementById('showPprButtons').checked,
-        showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked
+        showViewRevisionsBtn: document.getElementById('showViewRevisionsBtn').checked,
+        showGoodsReceptionBtn: document.getElementById('showGoodsReceptionBtn').checked
       };
       google.script.run.withSuccessHandler(() => {
         if (window.refreshConfig) window.refreshConfig();
@@ -184,7 +205,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       // wire events
-      ['parentFolderId','revisionParentFolderId','pprFolderId'].forEach(id=>{
+      ['parentFolderId','revisionParentFolderId','pprFolderId','goodsReceptionFolderId'].forEach(id=>{
         document.getElementById(id).addEventListener('input', updateFolderLinks);
       });
       document.getElementById('btnSave').addEventListener('click', () => {

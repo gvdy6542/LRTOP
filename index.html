@@ -508,6 +508,7 @@
          <button id="wasteBtn" class="green-button">Справка на брака</button>
        </div>
         <button id="labelsButton" class="green-button">Етикети</button>
+        <button id="goodsReceptionBtn" class="green-button" style="display:none;">Прием на стока</button>
         <button id="adminBtn" class="green-button" style="display:none;">Admin</button>
         <button id="refreshCacheBtn" class="green-button">Обнови кеш</button>
 
@@ -730,6 +731,49 @@
   </div>
 </div>
 
+<!-- Модал за прием на стока -->
+<div id="goodsReceptionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10000;">
+  <div class="modal-box" style="background:#fff; padding:24px; border-radius:16px; width:95%; max-width:800px; max-height:90vh; overflow-y:auto;">
+    <h2 style="margin-top:0; font-size:1.5rem;">Прием на стока</h2>
+
+    <input type="text" id="grStoreInput"
+           placeholder="№ на магазин"
+           style="width:100%; margin-bottom:14px; font-size:20px; padding:16px; border-radius:12px; border:1px solid #ccc;">
+
+    <input type="text" id="grBarcodeInput"
+           placeholder="Сканирайте баркод или въведете код"
+           style="width:100%; margin-bottom:14px; font-size:20px; padding:16px; border-radius:12px; background-color:#e0f8e9; border:2px solid #55b47a;">
+
+    <div id="grMessage" style="margin-bottom:14px; padding:14px 18px; background:#E6F9EE; border-left:4px solid #27AE60; border-radius:8px; color:#334E68; font-size:1.05rem;">
+      Сканирайте баркод за да добавите артикул.
+    </div>
+
+    <div id="grSupplierGroups"></div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:20px;">
+      <button id="grGenerateBtn" class="green-button" disabled style="padding:16px 28px; font-size:1.1rem;">Генерирай заявка</button>
+      <button id="grClearBtn" style="background:#F39C12; padding:16px 28px; font-size:1.1rem;">Изчисти всичко</button>
+      <button id="grCloseBtn" class="red-button" style="padding:16px 28px; font-size:1.1rem;">Затвори</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модал за избор на доставчик -->
+<div id="grSupplierModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:10001;">
+  <div style="background:#fff; padding:24px; border-radius:16px; max-width:400px; width:90%; box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+    <h3 style="margin-top:0;">Изберете доставчик</h3>
+    <div id="grSupplierOptions"></div>
+  </div>
+</div>
+
+<!-- Модал за резултати от генериране -->
+<div id="grResultsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:10001;">
+  <div style="background:#fff; padding:24px; border-radius:16px; max-width:500px; width:90%; max-height:80%; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+    <h3 style="margin-top:0; color:#27AE60; font-size:1.3rem;">Генерирани файлове</h3>
+    <div id="grResultsContent" style="font-size:1.05rem;"></div>
+    <button id="grCloseResultsBtn" class="green-button" style="margin-top:16px; padding:16px 28px; font-size:1.1rem;">Затвори</button>
+  </div>
+</div>
 
   <script>
 const FIXED_RATE = 1.95583;
@@ -1111,6 +1155,18 @@ function downloadAndSave() {
         w.google = google;
         w.refreshConfig = refreshConfig;
       }).openAdminPanel();
+    }
+
+    function openGoodsReception() {
+      const store = document.getElementById('store').value.trim();
+      document.getElementById('grStoreInput').value = store;
+      document.getElementById('goodsReceptionModal').style.display = 'flex';
+      if (store) {
+        document.getElementById('grBarcodeInput').focus();
+      } else {
+        document.getElementById('grStoreInput').focus();
+      }
+      grRestoreState();
     }
 
 
@@ -1588,6 +1644,233 @@ function refreshCache(){
     .refreshItemsCache();
 }
 
+/* ==================== Прием на стока ==================== */
+var grItems = {}; // { supplierCode: { supplier:{code,name,number}, items:[{code,name,qty}] } }
+var grPendingItem = null;
+
+function grGetStore() {
+  return document.getElementById('grStoreInput').value.trim();
+}
+
+function grSaveState() {
+  var store = grGetStore();
+  if (store) {
+    localStorage.setItem('gr_items_' + store, JSON.stringify(grItems));
+  }
+}
+
+function grRestoreState() {
+  var store = grGetStore();
+  if (!store) return;
+  var saved = localStorage.getItem('gr_items_' + store);
+  if (saved) {
+    try { grItems = JSON.parse(saved); } catch(e) { grItems = {}; }
+  } else {
+    grItems = {};
+  }
+  grRenderAll();
+}
+
+function grSetMessage(text, isError) {
+  var el = document.getElementById('grMessage');
+  el.textContent = text;
+  el.style.background = isError ? '#FDE9E8' : '#E6F9EE';
+  el.style.borderLeftColor = isError ? '#E74C3C' : '#27AE60';
+}
+
+function grLookupBarcode(barcode) {
+  grSetMessage('Търсене...', false);
+  google.script.run
+    .withSuccessHandler(function(item) {
+      if (!item || item.error) {
+        grSetMessage(item ? item.error : 'Артикулът не е намерен.', true);
+        document.getElementById('grBarcodeInput').focus();
+        return;
+      }
+      grSetMessage('Намерен: ' + item.code + ' - ' + item.name, false);
+      grFindSupplier(item);
+    })
+    .withFailureHandler(function(err) {
+      grSetMessage('Грешка: ' + err.message, true);
+      document.getElementById('grBarcodeInput').focus();
+    })
+    .processBarcode(barcode);
+}
+
+function grFindSupplier(item) {
+  google.script.run
+    .withSuccessHandler(function(suppliers) {
+      if (!suppliers || suppliers.length === 0) {
+        grAddItem({ supplierCode:'UNKNOWN', supplierName:'Неизвестен доставчик', supplierNumber:'', supplierEmail:'' }, item);
+      } else if (suppliers.length === 1) {
+        grAddItem(suppliers[0], item);
+      } else {
+        grPendingItem = item;
+        grShowSupplierModal(suppliers);
+      }
+    })
+    .withFailureHandler(function(err) {
+      grSetMessage('Грешка при търсене на доставчик: ' + err.message, true);
+      document.getElementById('grBarcodeInput').focus();
+    })
+    .getSuppliersByItemCode(item.code);
+}
+
+function grShowSupplierModal(suppliers) {
+  var container = document.getElementById('grSupplierOptions');
+  container.innerHTML = '';
+  suppliers.forEach(function(s) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'display:block;width:100%;padding:18px 20px;margin-bottom:10px;background:#D1F4F1;border:1px solid #CAD2D3;border-radius:12px;cursor:pointer;text-align:left;font-size:1.15rem;color:#102A43;box-shadow:none;min-height:56px;';
+    btn.textContent = s.supplierCode + ' - ' + s.supplierName;
+    btn.addEventListener('click', function() {
+      document.getElementById('grSupplierModal').style.display = 'none';
+      if (grPendingItem) {
+        grAddItem(s, grPendingItem);
+        grPendingItem = null;
+      }
+    });
+    container.appendChild(btn);
+  });
+  document.getElementById('grSupplierModal').style.display = 'flex';
+}
+
+function grAddItem(supplier, item) {
+  var key = supplier.supplierCode;
+  if (!grItems[key]) {
+    grItems[key] = { supplier: supplier, items: [] };
+  }
+  var existing = null;
+  for (var i = 0; i < grItems[key].items.length; i++) {
+    if (grItems[key].items[i].code === item.code) {
+      existing = grItems[key].items[i];
+      break;
+    }
+  }
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    grItems[key].items.push({ code: item.code, name: item.name, qty: 1 });
+  }
+  grSaveState();
+  grRenderAll();
+  document.getElementById('grBarcodeInput').focus();
+}
+
+function grRenderAll() {
+  var container = document.getElementById('grSupplierGroups');
+  container.innerHTML = '';
+  var hasItems = false;
+
+  Object.keys(grItems).forEach(function(key) {
+    var group = grItems[key];
+    if (!group.items.length) return;
+    hasItems = true;
+
+    var div = document.createElement('div');
+    div.style.cssText = 'margin-top:16px; border:1px solid #CAD2D3; border-radius:12px; overflow:hidden;';
+
+    var header = document.createElement('div');
+    header.style.cssText = 'background:#D1F4F1; padding:14px 18px; font-weight:600; font-size:1.1rem;';
+    header.textContent = group.supplier.supplierCode + ' - ' + group.supplier.supplierName;
+    div.appendChild(header);
+
+    var table = document.createElement('table');
+    table.style.cssText = 'width:100%; border-collapse:collapse;';
+    table.innerHTML = '<thead style="background:#F0F4F8;"><tr><th style="padding:12px 14px;text-align:left;font-size:1rem;">Код</th><th style="padding:12px 14px;text-align:left;font-size:1rem;">Описание</th><th style="padding:12px 14px;text-align:left;font-size:1rem;">МЕ</th><th style="padding:12px 14px;text-align:left;font-size:1rem;">Кол.</th><th style="padding:12px 14px;text-align:left;font-size:1rem;"></th></tr></thead>';
+
+    var tbody = document.createElement('tbody');
+    group.items.forEach(function(item, idx) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td style="padding:14px;border-bottom:1px solid #E8ECF0;font-size:1rem;">' + item.code + '</td>' +
+        '<td style="padding:14px;border-bottom:1px solid #E8ECF0;font-size:1rem;">' + item.name + '</td>' +
+        '<td style="padding:14px;border-bottom:1px solid #E8ECF0;font-size:1rem;">БР</td>' +
+        '<td style="padding:14px;border-bottom:1px solid #E8ECF0;font-size:1rem;font-weight:600;">' + item.qty + '</td>' +
+        '<td style="padding:14px;border-bottom:1px solid #E8ECF0;white-space:nowrap;">' +
+          '<span class="gr-edit-qty" data-s="' + key + '" data-i="' + idx + '" style="cursor:pointer;margin-right:16px;font-size:1.6rem;display:inline-block;min-width:40px;min-height:40px;text-align:center;line-height:40px;" title="Промени">&#9998;</span>' +
+          '<span class="gr-delete" data-s="' + key + '" data-i="' + idx + '" style="cursor:pointer;color:#E74C3C;font-size:1.6rem;display:inline-block;min-width:40px;min-height:40px;text-align:center;line-height:40px;" title="Изтрий">&#10006;</span>' +
+        '</td>';
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    div.appendChild(table);
+    container.appendChild(div);
+  });
+
+  document.getElementById('grGenerateBtn').disabled = !hasItems;
+}
+
+function grCloseModal() {
+  document.getElementById('goodsReceptionModal').style.display = 'none';
+}
+
+function grGenerate() {
+  var store = grGetStore();
+  if (!store) { alert('Моля, въведете код на магазин.'); return; }
+
+  var supplierKeys = Object.keys(grItems).filter(function(k) { return grItems[k].items.length > 0; });
+  if (!supplierKeys.length) return;
+
+  var btn = document.getElementById('grGenerateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Генериране...';
+  grSetMessage('Генериране на файлове...', false);
+
+  var results = [];
+  var pending = supplierKeys.length;
+
+  supplierKeys.forEach(function(key) {
+    var group = grItems[key];
+    var itemsArr = group.items.map(function(it) { return [it.code, it.name, it.qty]; });
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        results.push(res);
+        pending--;
+        if (pending <= 0) grOnAllDone(results);
+      })
+      .withFailureHandler(function(err) {
+        results.push({ error: err.message, supplierCode: key });
+        pending--;
+        if (pending <= 0) grOnAllDone(results);
+      })
+      .generateGoodsReceptionFile(store, group.supplier.supplierCode, group.supplier.supplierName, group.supplier.supplierNumber, itemsArr, group.supplier.supplierEmail || '');
+  });
+}
+
+function grOnAllDone(results) {
+  var btn = document.getElementById('grGenerateBtn');
+  btn.disabled = false;
+  btn.textContent = 'Генерирай заявка';
+
+  var content = document.getElementById('grResultsContent');
+  content.innerHTML = '';
+  var hasError = false;
+
+  results.forEach(function(r) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:8px 0; border-bottom:1px solid #eee;';
+    if (r.error) {
+      div.innerHTML = '<span style="color:#E74C3C;">&#10006; Грешка за ' + (r.supplierCode || '') + ': ' + r.error + '</span>';
+      hasError = true;
+    } else {
+      div.innerHTML = '&#10004; <a href="' + r.url + '" target="_blank" style="color:#27AE60;font-weight:600;">' + r.fileName + '</a>';
+    }
+    content.appendChild(div);
+  });
+
+  if (!hasError) {
+    grItems = {};
+    grSaveState();
+    grRenderAll();
+    grSetMessage('Файловете са генерирани успешно!', false);
+  } else {
+    grSetMessage('Има грешки при генерирането.', true);
+  }
+
+  document.getElementById('grResultsModal').style.display = 'flex';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('startRevisionBtn').addEventListener('click', startRevision);
@@ -1599,6 +1882,61 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('checkPprBtn').addEventListener('click', openCheckPprModal);
   document.getElementById('wasteBtn').addEventListener('click', openWasteModal);
   document.getElementById('labelsButton').addEventListener('click', openLabels);
+  document.getElementById('goodsReceptionBtn').addEventListener('click', openGoodsReception);
+  document.getElementById('grCloseBtn').addEventListener('click', grCloseModal);
+  document.getElementById('grGenerateBtn').addEventListener('click', grGenerate);
+  document.getElementById('grClearBtn').addEventListener('click', function() {
+    if (!confirm('Изчистване на всички артикули?')) return;
+    grItems = {};
+    grSaveState();
+    grRenderAll();
+    grSetMessage('Сканирайте баркод за да добавите артикул.', false);
+    document.getElementById('grBarcodeInput').focus();
+  });
+  document.getElementById('grBarcodeInput').addEventListener('keypress', function(e) {
+    if (e.key !== 'Enter') return;
+    var barcode = this.value.trim();
+    if (!barcode) return;
+    this.value = '';
+    grLookupBarcode(barcode);
+  });
+  document.getElementById('grCloseResultsBtn').addEventListener('click', function() {
+    document.getElementById('grResultsModal').style.display = 'none';
+    document.getElementById('grBarcodeInput').focus();
+  });
+  document.getElementById('grSupplierModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.style.display = 'none';
+      grPendingItem = null;
+      document.getElementById('grBarcodeInput').focus();
+    }
+  });
+  document.getElementById('grSupplierGroups').addEventListener('click', function(e) {
+    var target = e.target;
+    if (target.classList.contains('gr-edit-qty')) {
+      var sKey = target.getAttribute('data-s');
+      var idx = parseInt(target.getAttribute('data-i'));
+      var current = grItems[sKey].items[idx].qty;
+      var newQty = prompt('Въведете ново количество:', current);
+      if (newQty !== null) {
+        var parsed = parseFloat(newQty);
+        if (!isNaN(parsed) && parsed > 0) {
+          grItems[sKey].items[idx].qty = parsed;
+          grSaveState();
+          grRenderAll();
+        }
+      }
+    } else if (target.classList.contains('gr-delete')) {
+      var sKey = target.getAttribute('data-s');
+      var idx = parseInt(target.getAttribute('data-i'));
+      if (confirm('Изтриване на ' + grItems[sKey].items[idx].code + '?')) {
+        grItems[sKey].items.splice(idx, 1);
+        if (grItems[sKey].items.length === 0) delete grItems[sKey];
+        grSaveState();
+        grRenderAll();
+      }
+    }
+  });
   document.getElementById('adminBtn').addEventListener('click', openAdminPanel);
   document.getElementById('finishBtn').addEventListener('click', downloadAndSave);
   document.getElementById('submitPPRBtn').addEventListener('click', submitPPR);
@@ -1675,6 +2013,7 @@ function applyConfig(cfg){
   document.getElementById('viewRevisionsBtn').style.display = cfg.showViewRevisionsBtn ? 'inline-block' : 'none';
   document.getElementById('pprButtons').style.display = cfg.showPprButtons ? 'inline-block' : 'none';
   document.getElementById('labelsButton').style.display = cfg.showLabelsButton ? 'inline-block' : 'none';
+  document.getElementById('goodsReceptionBtn').style.display = cfg.showGoodsReceptionBtn ? 'inline-block' : 'none';
 }
 
 function refreshConfig(){
